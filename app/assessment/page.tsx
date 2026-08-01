@@ -32,11 +32,9 @@ export default function AssessmentPage() {
   const [showExplanation, setShowExplanation] = useState(false)
 
   useEffect(() => {
-    const loadQuestion = async () => {
-      await fetchNextQuestion()
-    }
-    loadQuestion()
-  }, [currentLevel, fetchNextQuestion])
+    fetchNextQuestion()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentLevel])
 
   const fetchNextQuestion = async () => {
     setLoading(true)

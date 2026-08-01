@@ -30,11 +30,9 @@ export default function AdminVideosPage() {
   const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
-    const loadVideos = async () => {
-      await fetchVideos()
-    }
-    loadVideos()
-  }, [fetchVideos])
+    fetchVideos()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const fetchVideos = async () => {
     try {

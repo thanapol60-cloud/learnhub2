@@ -32,11 +32,9 @@ export default function AdminCoursesPage() {
   const [creating, setCreating] = useState(false)
 
   useEffect(() => {
-    const loadCourses = async () => {
-      await fetchCourses()
-    }
-    loadCourses()
-  }, [fetchCourses])
+    fetchCourses()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const fetchCourses = async () => {
     try {
