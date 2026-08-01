@@ -11,10 +11,6 @@ export async function GET(request: NextRequest) {
       where: { role: 'user' },
     })
 
-    const assessments = await prisma.assessmentRecord.findMany({
-      select: { currentLevel: true },
-    })
-
     const enrollments = await prisma.courseEnrollment.count()
 
     // Calculate level distribution
