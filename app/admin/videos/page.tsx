@@ -30,8 +30,11 @@ export default function AdminVideosPage() {
   const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
-    fetchVideos()
-  }, [])
+    const loadVideos = async () => {
+      await fetchVideos()
+    }
+    loadVideos()
+  }, [fetchVideos])
 
   const fetchVideos = async () => {
     try {

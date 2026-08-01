@@ -32,8 +32,11 @@ export default function AssessmentPage() {
   const [showExplanation, setShowExplanation] = useState(false)
 
   useEffect(() => {
-    fetchNextQuestion()
-  }, [currentLevel])
+    const loadQuestion = async () => {
+      await fetchNextQuestion()
+    }
+    loadQuestion()
+  }, [currentLevel, fetchNextQuestion])
 
   const fetchNextQuestion = async () => {
     setLoading(true)

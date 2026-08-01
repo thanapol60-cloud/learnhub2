@@ -6,10 +6,6 @@ import { useRouter } from 'next/navigation'
 
 export default function AdminDashboard() {
   const router = useRouter()
-  const [stats, setStats] = useState({
-    videosCount: 0,
-    coursesCount: 0,
-  })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -68,11 +64,11 @@ export default function AdminDashboard() {
         <div className="grid md:grid-cols-2 gap-6 mb-12">
           <div className="bg-white rounded-lg shadow p-6">
             <p className="text-gray-600 text-sm mb-2">วิดีโอทั้งหมด</p>
-            <p className="text-4xl font-bold text-blue-600">{stats.videosCount}</p>
+            <p className="text-4xl font-bold text-blue-600">-</p>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <p className="text-gray-600 text-sm mb-2">คอร์สทั้งหมด</p>
-            <p className="text-4xl font-bold text-green-600">{stats.coursesCount}</p>
+            <p className="text-4xl font-bold text-green-600">-</p>
           </div>
         </div>
 

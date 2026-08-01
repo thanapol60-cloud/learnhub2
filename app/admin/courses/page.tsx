@@ -32,8 +32,11 @@ export default function AdminCoursesPage() {
   const [creating, setCreating] = useState(false)
 
   useEffect(() => {
-    fetchCourses()
-  }, [])
+    const loadCourses = async () => {
+      await fetchCourses()
+    }
+    loadCourses()
+  }, [fetchCourses])
 
   const fetchCourses = async () => {
     try {
