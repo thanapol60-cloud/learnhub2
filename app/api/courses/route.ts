@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 export async function GET() {
   try {
     const courses = await prisma.course.findMany({
+      include: { videos: { select: { id: true, title: true, duration: true } } },
       orderBy: { minCefrLevel: 'asc' },
     })
 

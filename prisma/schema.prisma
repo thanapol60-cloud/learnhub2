@@ -15,6 +15,7 @@ model User {
   role                  String      @default("user") // user, admin
   currentLevel          String      @default("A1") // CEFR level: A1, A2, B1, B2, C1, C2
   assessmentCompleted   Boolean     @default(false)
+  assessmentStartedAt   DateTime?   // Marks the current attempt; records before it belong to past attempts
   correctAnswers        Int         @default(0)
   wrongAnswers          Int         @default(0)
   createdAt             DateTime    @default(now())

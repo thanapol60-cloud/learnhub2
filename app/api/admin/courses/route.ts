@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
       instructorName,
       learningOutcomes,
       duration,
+      videoIds,
     } = await request.json()
 
     if (!title || !description || !minCefrLevel) {
@@ -29,22 +30,27 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const selectedVideoIds: string[] = Array.isArray(videoIds) ? videoIds : []
+
     const course = await prisma.course.create({
       data: {
         title,
         description,
         minCefrLevel,
-        maxCefrLevel,
+        maxCefrLevel: maxCefrLevel || null,
         instructorName,
         learningOutcomes,
         duration: duration || 0,
         createdById: user.id,
         content: { chapters: [] },
+        // A course is a set of clips grouped together
+        ...(selectedVideoIds.length > 0
+          ? { videos: { connect: selectedVideoIds.map((id) => ({ id })) } }
+          : {}),
       },
       include: {
-        createdBy: {
-          select: { name: true },
-        },
+        createdBy: { select: { name: true } },
+        videos: { select: { id: true, title: true, duration: true } },
       },
     })
 

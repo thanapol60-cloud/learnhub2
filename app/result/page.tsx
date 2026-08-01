@@ -4,6 +4,12 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { CEFRLevel, CEFR_DESCRIPTIONS } from '@/lib/cefr'
 
+interface CourseVideo {
+  id: string
+  title: string
+  duration: number
+}
+
 interface Course {
   id: string
   title: string
@@ -12,6 +18,7 @@ interface Course {
   instructorName?: string
   duration: number
   learningOutcomes?: string[]
+  videos?: CourseVideo[]
 }
 
 interface ResultData {
@@ -154,6 +161,29 @@ export default function ResultPage() {
                           </li>
                         ))}
                       </ul>
+                    </div>
+                  )}
+
+                  {course.videos && course.videos.length > 0 && (
+                    <div className="mb-4 bg-gray-50 rounded-lg p-4">
+                      <p className="font-semibold text-gray-800 mb-2">
+                        คลิปในคอร์ส ({course.videos.length} คลิป):
+                      </p>
+                      <ol className="space-y-1">
+                        {course.videos.map((video, idx) => (
+                          <li
+                            key={video.id}
+                            className="text-sm text-gray-700 flex justify-between gap-4"
+                          >
+                            <span>
+                              {idx + 1}. {video.title}
+                            </span>
+                            <span className="text-gray-500 whitespace-nowrap">
+                              {Math.round(video.duration / 60)} นาที
+                            </span>
+                          </li>
+                        ))}
+                      </ol>
                     </div>
                   )}
 

@@ -13,7 +13,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Reset counters so each assessment starts from a clean slate at A1
+    // Reset counters so each assessment starts from a clean slate at A1.
+    // assessmentStartedAt separates this attempt's answers from earlier ones,
+    // which is what keeps already-answered questions from reappearing.
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -21,6 +23,7 @@ export async function POST(request: NextRequest) {
         correctAnswers: 0,
         wrongAnswers: 0,
         assessmentCompleted: false,
+        assessmentStartedAt: new Date(),
       },
     })
 

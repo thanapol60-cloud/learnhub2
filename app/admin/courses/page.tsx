@@ -6,6 +6,12 @@ import { useRouter } from 'next/navigation'
 
 const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
 
+interface CourseVideo {
+  id: string
+  title: string
+  duration: number
+}
+
 interface Course {
   id: string
   title: string
@@ -13,12 +19,23 @@ interface Course {
   minCefrLevel: string
   maxCefrLevel?: string
   duration: number
-  videos: any[]
+  videos: CourseVideo[]
+}
+
+interface Video {
+  id: string
+  title: string
+  duration: number
+  adminLevel?: string
+  suggestedLevel?: string
+  courseId?: string | null
 }
 
 export default function AdminCoursesPage() {
   const router = useRouter()
   const [courses, setCourses] = useState<Course[]>([])
+  const [videos, setVideos] = useState<Video[]>([])
+  const [selectedVideoIds, setSelectedVideoIds] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [formData, setFormData] = useState({
@@ -33,8 +50,29 @@ export default function AdminCoursesPage() {
 
   useEffect(() => {
     fetchCourses()
+    fetchVideos()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const fetchVideos = async () => {
+    try {
+      const response = await fetch('/api/admin/videos')
+      if (response.ok) {
+        const data = await response.json()
+        setVideos(data.videos)
+      }
+    } catch (error) {
+      console.error('Failed to fetch videos:', error)
+    }
+  }
+
+  const toggleVideo = (videoId: string) => {
+    setSelectedVideoIds((prev) =>
+      prev.includes(videoId)
+        ? prev.filter((id) => id !== videoId)
+        : [...prev, videoId]
+    )
+  }
 
   const fetchCourses = async () => {
     try {
@@ -71,6 +109,7 @@ export default function AdminCoursesPage() {
           ...formData,
           duration: parseInt(formData.duration) || 0,
           learningOutcomes: [],
+          videoIds: selectedVideoIds,
         }),
       })
 
@@ -83,8 +122,10 @@ export default function AdminCoursesPage() {
           instructorName: '',
           duration: '',
         })
+        setSelectedVideoIds([])
         setShowCreateForm(false)
         await fetchCourses()
+        await fetchVideos()
       }
     } catch (error) {
       console.error('Create failed:', error)
@@ -232,6 +273,61 @@ export default function AdminCoursesPage() {
                     placeholder="20"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-medium mb-2">
+                  เลือกคลิปที่จะรวมเป็นคอร์ส
+                  {selectedVideoIds.length > 0 && (
+                    <span className="ml-2 text-blue-600">
+                      (เลือกแล้ว {selectedVideoIds.length} คลิป)
+                    </span>
+                  )}
+                </label>
+
+                {videos.length === 0 ? (
+                  <p className="text-sm text-gray-500 border rounded-lg p-4">
+                    ยังไม่มีคลิปในระบบ อัพโหลดคลิปที่หน้า &quot;จัดการวิดีโอ&quot; ก่อน
+                  </p>
+                ) : (
+                  <div className="border rounded-lg divide-y max-h-64 overflow-y-auto">
+                    {videos.map((video) => {
+                      const level = video.adminLevel || video.suggestedLevel
+                      const checked = selectedVideoIds.includes(video.id)
+                      return (
+                        <label
+                          key={video.id}
+                          className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 ${
+                            checked ? 'bg-blue-50' : ''
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleVideo(video.id)}
+                            className="h-4 w-4"
+                          />
+                          <span className="flex-1 text-sm text-gray-800">
+                            {video.title}
+                          </span>
+                          {level && (
+                            <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">
+                              {level}
+                            </span>
+                          )}
+                          <span className="text-xs text-gray-500 whitespace-nowrap">
+                            {Math.round(video.duration / 60)} นาที
+                          </span>
+                          {video.courseId && (
+                            <span className="text-xs text-amber-600 whitespace-nowrap">
+                              อยู่ในคอร์สอื่น
+                            </span>
+                          )}
+                        </label>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-4">

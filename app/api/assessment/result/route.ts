@@ -1,49 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { calculateCEFRLevel } from '@/lib/cefr'
-import { cookies } from 'next/headers'
+import { CEFRLevel, CEFR_LEVELS } from '@/lib/cefr'
+import { getUser } from '@/lib/auth-middleware'
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const userId = cookieStore.get('userId')?.value
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 400 }
-      )
+    const user = await getUser(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
+    const record = await prisma.user.findUnique({ where: { id: user.id } })
+    if (!record) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // In an adaptive test the level reached is the result; raw accuracy hovers
+    // near the pass mark by design because difficulty tracks the learner.
+    const cefrLevel = record.currentLevel as CEFRLevel
+    const totalAnswers = record.correctAnswers + record.wrongAnswers
+    const accuracy =
+      totalAnswers > 0
+        ? Math.round((record.correctAnswers / totalAnswers) * 100)
+        : 0
+
+    // Courses at the learner's level, plus the level below as reinforcement
+    const levelIndex = CEFR_LEVELS.indexOf(cefrLevel)
+    const relevantLevels = [cefrLevel]
+    if (levelIndex > 0) relevantLevels.push(CEFR_LEVELS[levelIndex - 1])
+
+    const recommendations = await prisma.course.findMany({
+      where: { minCefrLevel: { in: relevantLevels } },
+      include: { videos: { select: { id: true, title: true, duration: true } } },
+      orderBy: { minCefrLevel: 'desc' },
     })
 
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
-    }
-
-    const totalAnswers = user.correctAnswers + user.wrongAnswers
-    const cefrLevel = calculateCEFRLevel(user.correctAnswers, totalAnswers)
-    const accuracy = totalAnswers > 0
-      ? Math.round((user.correctAnswers / totalAnswers) * 100)
-      : 0
-
-    // Get recommended courses based on CEFR level
-    const recommendations = await prisma.course.findMany({
-      where: {
-        minCefrLevel: cefrLevel,
-      },
-      take: 5,
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { assessmentCompleted: true },
     })
 
     return NextResponse.json({
       cefrLevel,
       totalQuestions: totalAnswers,
-      correctAnswers: user.correctAnswers,
+      correctAnswers: record.correctAnswers,
       accuracy,
       recommendations,
     })

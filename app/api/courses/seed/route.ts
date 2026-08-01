@@ -1,99 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getUser, requireAdmin } from '@/lib/auth-middleware'
-
-const SEED_COURSES = [
-  {
-    title: 'Basic English Fundamentals',
-    description:
-      'Learn the basics of English including pronunciation, simple greetings, and basic vocabulary.',
-    minCefrLevel: 'A1',
-    maxCefrLevel: 'A1',
-    instructorName: 'Sarah Johnson',
-    duration: 20,
-    learningOutcomes: [
-      'Alphabet and pronunciation',
-      'Basic greetings',
-      'Numbers and colors',
-      'Simple nouns and verbs',
-    ],
-  },
-  {
-    title: 'Elementary English Communication',
-    description:
-      'Develop your ability to communicate in simple sentences and understand basic conversations.',
-    minCefrLevel: 'A2',
-    maxCefrLevel: 'A2',
-    instructorName: 'Michael Smith',
-    duration: 30,
-    learningOutcomes: [
-      'Present simple tense',
-      'Personal information questions',
-      'Food and drink vocabulary',
-      'Basic dialogues',
-    ],
-  },
-  {
-    title: 'Intermediate English Conversation',
-    description:
-      'Improve your conversational skills and ability to discuss familiar topics in more detail.',
-    minCefrLevel: 'B1',
-    maxCefrLevel: 'B1',
-    instructorName: 'Emma Wilson',
-    duration: 40,
-    learningOutcomes: [
-      'Past and present tenses',
-      'Expressing opinions',
-      'Descriptive language',
-      'Telephone conversations',
-    ],
-  },
-  {
-    title: 'Upper Intermediate Business English',
-    description:
-      'Master professional English for business communication, meetings, and presentations.',
-    minCefrLevel: 'B2',
-    maxCefrLevel: 'B2',
-    instructorName: 'David Brown',
-    duration: 45,
-    learningOutcomes: [
-      'Business vocabulary',
-      'Email writing',
-      'Presentation skills',
-      'Meeting discussions',
-    ],
-  },
-  {
-    title: 'Advanced English Literature and Writing',
-    description:
-      'Explore literature, improve advanced writing skills, and master complex language structures.',
-    minCefrLevel: 'C1',
-    maxCefrLevel: 'C1',
-    instructorName: 'Jennifer Davis',
-    duration: 50,
-    learningOutcomes: [
-      'Literary analysis',
-      'Academic writing',
-      'Advanced grammar',
-      'Essay composition',
-    ],
-  },
-  {
-    title: 'Proficiency English Mastery',
-    description:
-      'Achieve mastery of English with advanced topics, nuances, and cultural understanding.',
-    minCefrLevel: 'C2',
-    maxCefrLevel: 'C2',
-    instructorName: 'Robert Taylor',
-    duration: 60,
-    learningOutcomes: [
-      'Idiomatic expressions',
-      'Debate and argumentation',
-      'Specialized vocabulary',
-      'Native-level fluency',
-    ],
-  },
-]
+import { SEED_COURSES } from '@/lib/seed-data'
 
 export async function POST(request: NextRequest) {
   const authError = requireAdmin(request)
@@ -105,27 +13,64 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const force = request.nextUrl.searchParams.get('force') === 'true'
     const existingCount = await prisma.course.count()
-    if (existingCount > 0) {
-      return NextResponse.json(
-        { message: 'Courses already exist', count: existingCount },
-        { status: 200 }
-      )
+
+    if (existingCount > 0 && !force) {
+      return NextResponse.json({
+        message: 'Courses already exist. Pass ?force=true to replace them.',
+        count: existingCount,
+      })
     }
 
-    for (const course of SEED_COURSES) {
-      await prisma.course.create({
+    if (force) {
+      await prisma.video.deleteMany()
+      await prisma.course.deleteMany()
+    }
+
+    let videoCount = 0
+
+    for (const seed of SEED_COURSES) {
+      const course = await prisma.course.create({
         data: {
-          ...course,
+          title: seed.title,
+          description: seed.description,
+          minCefrLevel: seed.cefrLevel,
+          maxCefrLevel: seed.cefrLevel,
+          instructorName: seed.instructorName,
+          duration: seed.duration,
+          learningOutcomes: seed.learningOutcomes,
           createdById: user.id,
           content: { chapters: [] },
         },
       })
+
+      // Placeholder clips so each course has content to show
+      await prisma.video.createMany({
+        data: seed.videos.map((video) => ({
+          title: video.title,
+          description: video.description,
+          videoUrl: `https://example.com/learnhub/${seed.cefrLevel.toLowerCase()}/${video.title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '')}`,
+          duration: video.minutes * 60,
+          uploadedById: user.id,
+          suggestedLevel: seed.cefrLevel,
+          adminLevel: seed.cefrLevel,
+          analyzed: true,
+          analysisSummary: `ตัวอย่างสำหรับทดสอบระบบ กำหนดระดับ ${seed.cefrLevel} ไว้ล่วงหน้า`,
+          courseId: course.id,
+        })),
+      })
+
+      videoCount += seed.videos.length
     }
 
     return NextResponse.json({
-      message: 'Courses seeded successfully',
-      count: SEED_COURSES.length,
+      message: 'Courses and placeholder videos seeded successfully',
+      courses: SEED_COURSES.length,
+      videos: videoCount,
     })
   } catch (error) {
     console.error('Failed to seed courses:', error)
