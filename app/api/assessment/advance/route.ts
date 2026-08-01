@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getNextLevel } from '@/lib/assessment'
+import { CEFRLevel } from '@/lib/cefr'
 import { cookies } from 'next/headers'
 
 export async function POST() {
@@ -26,7 +27,7 @@ export async function POST() {
       )
     }
 
-    const nextLevel = getNextLevel(user.currentLevel)
+    const nextLevel = getNextLevel(user.currentLevel as CEFRLevel)
     if (!nextLevel) {
       return NextResponse.json(
         { error: 'Already at maximum level' },
