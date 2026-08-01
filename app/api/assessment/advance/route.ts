@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getNextLevel } from '@/lib/assessment'
 import { cookies } from 'next/headers'
