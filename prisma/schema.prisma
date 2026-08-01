@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String      @id @default(cuid())
+  email                 String      @unique
+  password              String
+  name                  String
+  role                  String      @default("user") // user, admin
+  currentLevel          String      @default("A1") // CEFR level: A1, A2, B1, B2, C1, C2
+  assessmentCompleted   Boolean     @default(false)
+  correctAnswers        Int         @default(0)
+  wrongAnswers          Int         @default(0)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  assessmentHistory     AssessmentRecord[]
+  enrolledCourses       CourseEnrollment[]
+  createdCourses        Course[]      @relation("CreatedBy")
+  uploadedVideos        Video[]       @relation("UploadedBy")
+
+  @@index([currentLevel])
+  @@index([role])
+}
+
+model Question {
+  id                    String      @id @default(cuid())
+  question              String      @db.LongText
+  options               Json        // [{text: string, isCorrect: boolean}]
+  correctAnswer         String
+  explanation           String      @db.LongText
+  difficulty            Int         @default(1) // 1-10, affects CEFR level assignment
+  cefrLevel             String      // A1, A2, B1, B2, C1, C2
+  category              String      @default("general") // grammar, vocabulary, reading, listening
+  createdAt             DateTime    @default(now())
+
+  assessmentRecords     AssessmentRecord[]
+
+  @@index([cefrLevel])
+  @@index([category])
+}
+
+model AssessmentRecord {
+  id                    String      @id @default(cuid())
+  userId                String
+  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId            String
+  question              Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  userAnswer            String
+  isCorrect             Boolean
+  currentLevel          String      // The level at the time of answering
+  createdAt             DateTime    @default(now())
+
+  @@index([userId])
+  @@index([questionId])
+}
+
+model Video {
+  id                    String      @id @default(cuid())
+  title                 String
+  description           String?     @db.LongText
+  videoUrl              String
+  duration              Int         // seconds
+  uploadedById          String
+  uploadedBy            User        @relation("UploadedBy", fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  // AI Analysis results
+  suggestedLevel        String?     // A1-C2, suggested by AI
+  adminLevel            String?     // A1-C2, chosen by admin
+  analysisSummary       String?     @db.LongText
+  analyzed              Boolean     @default(false)
+
+  courseId              String?
+  course                Course?     @relation("Videos", fields: [courseId], references: [id], onDelete: SetNull)
+
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  @@index([uploadedById])
+  @@index([suggestedLevel])
+  @@index([courseId])
+}
+
+model Course {
+  id                    String      @id @default(cuid())
+  title                 String
+  description           String      @db.LongText
+  minCefrLevel          String      // Minimum CEFR level required (A1, A2, B1, B2, C1, C2)
+  maxCefrLevel          String?     // Maximum CEFR level (if null, suitable for all higher levels)
+  instructorName        String?
+  createdById           String
+  createdBy             User        @relation("CreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  content               Json        // Structured course content
+  duration              Int         @default(0) // hours
+  learningOutcomes      Json?       // [string]
+  videos                Video[]     @relation("Videos")
+
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  enrollments           CourseEnrollment[]
+
+  @@index([minCefrLevel])
+  @@index([createdById])
+}
+
+model CourseEnrollment {
+  id                    String      @id @default(cuid())
+  userId                String
+  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId              String
+  course                Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  enrolledAt            DateTime    @default(now())
+  completedAt           DateTime?
+  progress              Int         @default(0) // 0-100 percentage
+
+  @@unique([userId, courseId])
+  @@index([userId])
+}
