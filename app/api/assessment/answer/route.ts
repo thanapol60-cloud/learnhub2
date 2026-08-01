@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { updateAssessmentState, getNextLevel } from '@/lib/assessment'
+import { getNextLevel, demoteLevel } from '@/lib/assessment'
+import { CEFRLevel } from '@/lib/cefr'
 import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
@@ -39,48 +40,30 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Update user stats
-    if (isCorrect) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          correctAnswers: user.correctAnswers + 1,
-        },
-      })
-    } else {
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          wrongAnswers: user.wrongAnswers + 1,
-        },
-      })
-    }
-
-    // Get updated user and determine if level should change
-    const updatedUser = await prisma.user.findUnique({
+    // Update user stats and get the updated record back
+    const updatedUser = await prisma.user.update({
       where: { id: userId },
-    })!
+      data: isCorrect
+        ? { correctAnswers: { increment: 1 } }
+        : { wrongAnswers: { increment: 1 } },
+    })
 
     // Calculate if user should advance or demote
     const totalAnswers = updatedUser.correctAnswers + updatedUser.wrongAnswers
     const accuracy = updatedUser.correctAnswers / totalAnswers
 
-    let newLevel = user.currentLevel
+    const currentLevel = user.currentLevel as CEFRLevel
+    let newLevel = currentLevel
     let canAdvance = false
 
     if (accuracy >= 0.8 && totalAnswers >= 3) {
-      const nextLevel = getNextLevel(user.currentLevel)
+      const nextLevel = getNextLevel(currentLevel)
       if (nextLevel) {
         newLevel = nextLevel
         canAdvance = true
       }
     } else if (accuracy < 0.5 && totalAnswers >= 2) {
-      if (user.currentLevel !== 'A1') {
-        newLevel = user.currentLevel === 'A2' ? 'A1' :
-                   user.currentLevel === 'B1' ? 'A2' :
-                   user.currentLevel === 'B2' ? 'B1' :
-                   user.currentLevel === 'C1' ? 'B2' : 'C1'
-      }
+      newLevel = demoteLevel(currentLevel)
     }
 
     if (newLevel !== user.currentLevel) {

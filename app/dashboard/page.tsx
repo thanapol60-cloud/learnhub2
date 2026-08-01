@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { CEFR_DESCRIPTIONS } from '@/lib/cefr'
+import { CEFR_DESCRIPTIONS, CEFRLevel } from '@/lib/cefr'
 
 interface DashboardData {
-  currentLevel: string
+  currentLevel: CEFRLevel
   totalAssessments: number
   bestScore: number
   recentAssessment?: {
@@ -64,7 +64,7 @@ export default function DashboardPage() {
               <p className="text-sm opacity-90 mb-2">ระดับปัจจุบัน</p>
               <p className="text-5xl font-bold mb-4">{data.currentLevel}</p>
               <p className="text-lg">
-                {CEFR_DESCRIPTIONS[data.currentLevel as any] || 'Unknown Level'}
+                {CEFR_DESCRIPTIONS[data.currentLevel] || 'Unknown Level'}
               </p>
             </div>
 
