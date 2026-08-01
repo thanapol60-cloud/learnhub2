@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { getNextLevel } from '@/lib/assessment'
 import { cookies } from 'next/headers'
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     const cookieStore = await cookies()
     const userId = cookieStore.get('userId')?.value
