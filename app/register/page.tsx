@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { AuthLayout } from '@/components/auth-layout'
+import { Spinner } from '@/components/ui'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -16,7 +18,9 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
@@ -26,12 +30,12 @@ export default function RegisterPage() {
     setError('')
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
+      setError('รหัสผ่านทั้งสองช่องไม่ตรงกัน')
       return
     }
 
     if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters')
+      setError('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร')
       return
     }
 
@@ -62,99 +66,123 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center py-12 px-4">
-      <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">สมัครสมาชิก</h1>
-        <p className="text-gray-600 mb-6">สร้างบัญชีใหม่เพื่อเริ่มต้นใช้งาน</p>
+    <AuthLayout
+      title="สมัครใช้งาน"
+      subtitle="สร้างบัญชีเพื่อเริ่มประเมินระดับและบันทึกความก้าวหน้า"
+      footer={
+        <>
+          มีบัญชีอยู่แล้ว?{' '}
+          <Link href="/login" className="font-medium text-brand-800 hover:underline">
+            เข้าสู่ระบบ
+          </Link>
+        </>
+      }
+    >
+      {error && (
+        <div className="notice notice-error mb-6" role="alert">
+          {error}
+        </div>
+      )}
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
-            {error}
-          </div>
-        )}
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <label htmlFor="name" className="label">
+            ชื่อ-นามสกุล
+          </label>
+          <input
+            id="name"
+            type="text"
+            name="name"
+            autoComplete="name"
+            value={formData.name}
+            onChange={handleChange}
+            required
+            className="input"
+            placeholder="ชื่อของคุณ"
+          />
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="email" className="label">
+            อีเมล
+          </label>
+          <input
+            id="email"
+            type="email"
+            name="email"
+            autoComplete="email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+            className="input"
+            placeholder="email@example.com"
+          />
+        </div>
+
+        <div className="grid gap-5 sm:grid-cols-2">
           <div>
-            <label className="block text-gray-700 font-medium mb-2">ชื่อเต็ม</label>
+            <label htmlFor="password" className="label">
+              รหัสผ่าน
+            </label>
             <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="ชื่อของคุณ"
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-700 font-medium mb-2">อีเมล</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="email@example.com"
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-700 font-medium mb-2">รหัสผ่าน</label>
-            <input
+              id="password"
               type="password"
               name="password"
+              autoComplete="new-password"
               value={formData.password}
               onChange={handleChange}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input"
               placeholder="••••••••"
             />
+            <p className="mt-1.5 text-xs text-slate-500">อย่างน้อย 6 ตัวอักษร</p>
           </div>
 
           <div>
-            <label className="block text-gray-700 font-medium mb-2">ยืนยันรหัสผ่าน</label>
+            <label htmlFor="confirmPassword" className="label">
+              ยืนยันรหัสผ่าน
+            </label>
             <input
+              id="confirmPassword"
               type="password"
               name="confirmPassword"
+              autoComplete="new-password"
               value={formData.confirmPassword}
               onChange={handleChange}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input"
               placeholder="••••••••"
             />
           </div>
+        </div>
 
-          <div>
-            <label className="block text-gray-700 font-medium mb-2">ประเภท</label>
-            <select
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="user">ผู้เรียน (User)</option>
-              <option value="admin">ผู้ดูแลระบบ (Admin)</option>
-            </select>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        <div>
+          <label htmlFor="role" className="label">
+            ประเภทบัญชี
+          </label>
+          <select
+            id="role"
+            name="role"
+            value={formData.role}
+            onChange={handleChange}
+            className="input"
           >
-            {loading ? 'กำลังสมัคร...' : 'สมัครสมาชิก'}
-          </button>
-        </form>
+            <option value="user">ผู้เรียน — ทำแบบประเมินและเรียนคอร์ส</option>
+            <option value="admin">ผู้ดูแลระบบ — จัดการเนื้อหาและดูสถิติ</option>
+          </select>
+        </div>
 
-        <p className="text-center text-gray-600 mt-6">
-          มีบัญชีแล้ว?{' '}
-          <Link href="/login" className="text-blue-600 hover:text-blue-700 font-medium">
-            เข้าสู่ระบบ
-          </Link>
-        </p>
-      </div>
-    </div>
+        <button type="submit" disabled={loading} className="btn btn-primary w-full">
+          {loading ? (
+            <>
+              <Spinner className="h-4 w-4 border-white/30 border-t-white" />
+              กำลังสร้างบัญชี...
+            </>
+          ) : (
+            'สร้างบัญชี'
+          )}
+        </button>
+      </form>
+    </AuthLayout>
   )
 }

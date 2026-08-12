@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { AdminShell } from '@/components/admin-shell'
+import { CefrBadge, EmptyState, Spinner } from '@/components/ui'
+import { IconClock, IconPlus, IconSparkle } from '@/components/icons'
 
 interface Video {
   id: string
@@ -89,7 +92,7 @@ export default function AdminVideosPage() {
   }
 
   const handleDelete = async (videoId: string) => {
-    if (!confirm('คุณแน่ใจหรือว่าต้องการลบวิดีโอนี้?')) return
+    if (!confirm('ยืนยันการลบวิดีโอนี้ออกจากระบบ?')) return
 
     try {
       const response = await fetch(`/api/admin/videos/${videoId}`, {
@@ -105,204 +108,212 @@ export default function AdminVideosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div>
-            <Link href="/admin/dashboard" className="text-blue-600 hover:text-blue-700">
-              ← กลับ
-            </Link>
-            <h1 className="text-2xl font-bold text-gray-800">จัดการวิดีโอ</h1>
-          </div>
-          <button
-            onClick={() => setShowUploadForm(!showUploadForm)}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            + อัพโหลดวิดีโอใหม่
-          </button>
-        </div>
-      </header>
+    <AdminShell
+      title="คลังวิดีโอ"
+      description="อัปโหลดคลิปบทเรียน ตรวจสอบระดับที่ AI เสนอ และกำหนดระดับ CEFR ที่ใช้จริง"
+      actions={
+        <button
+          onClick={() => setShowUploadForm((v) => !v)}
+          className="btn btn-primary btn-sm"
+        >
+          {showUploadForm ? (
+            'ปิดแบบฟอร์ม'
+          ) : (
+            <>
+              <IconPlus className="h-4 w-4" />
+              อัปโหลดวิดีโอ
+            </>
+          )}
+        </button>
+      }
+    >
+      {showUploadForm && (
+        <section className="card mb-8 overflow-hidden">
+          <h2 className="border-b border-slate-200 px-6 py-4 text-sm font-semibold text-slate-900">
+            อัปโหลดวิดีโอใหม่
+          </h2>
+          <form onSubmit={handleUpload} className="space-y-5 p-6">
+            <div>
+              <label htmlFor="title" className="label">
+                ชื่อวิดีโอ
+              </label>
+              <input
+                id="title"
+                type="text"
+                name="title"
+                value={formData.title}
+                onChange={handleInputChange}
+                required
+                className="input"
+                placeholder="เช่น English Grammar Basics"
+              />
+            </div>
 
-      <div className="container mx-auto px-4 py-12">
-        {/* Upload Form */}
-        {showUploadForm && (
-          <div className="bg-white rounded-lg shadow p-6 mb-8">
-            <h2 className="text-xl font-bold mb-4">อัพโหลดวิดีโอใหม่</h2>
-            <form onSubmit={handleUpload} className="space-y-4">
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">
-                  ชื่อวิดีโอ
-                </label>
-                <input
-                  type="text"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="เช่น English Grammar Basics"
-                />
-              </div>
+            <div>
+              <label htmlFor="description" className="label">
+                คำอธิบาย
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                className="input"
+                placeholder="รายละเอียดเนื้อหาในวิดีโอ — ใช้ประกอบการวิเคราะห์ระดับด้วย AI"
+                rows={3}
+              />
+            </div>
 
+            <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <label className="block text-gray-700 font-medium mb-2">
-                  คำอธิบาย
-                </label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="รายละเอียดเกี่ยวกับวิดีโอ"
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">
+                <label htmlFor="videoUrl" className="label">
                   URL ของวิดีโอ
                 </label>
                 <input
+                  id="videoUrl"
                   type="url"
                   name="videoUrl"
                   value={formData.videoUrl}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input"
                   placeholder="https://youtube.com/..."
                 />
               </div>
 
               <div>
-                <label className="block text-gray-700 font-medium mb-2">
-                  ระยะเวลา (วินาที)
+                <label htmlFor="duration" className="label">
+                  ความยาว (วินาที)
                 </label>
                 <input
+                  id="duration"
                   type="number"
                   name="duration"
                   value={formData.duration}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input"
                   placeholder="600"
                 />
               </div>
+            </div>
 
-              <div className="flex gap-4">
-                <button
-                  type="submit"
-                  disabled={uploading}
-                  className="flex-1 bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {uploading ? 'กำลังอัพโหลด...' : 'อัพโหลด'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowUploadForm(false)}
-                  className="flex-1 bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded hover:bg-gray-400"
-                >
-                  ยกเลิก
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* Videos List */}
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p>กำลังโหลด...</p>
-          </div>
-        ) : videos.length > 0 ? (
-          <div className="space-y-4">
-            {videos.map((video) => (
-              <div
-                key={video.id}
-                className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-all"
+            <div className="flex gap-3 border-t border-slate-200 pt-5">
+              <button type="submit" disabled={uploading} className="btn btn-primary">
+                {uploading ? (
+                  <>
+                    <Spinner className="h-4 w-4 border-white/30 border-t-white" />
+                    กำลังอัปโหลด...
+                  </>
+                ) : (
+                  'อัปโหลด'
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowUploadForm(false)}
+                className="btn btn-secondary"
               >
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-800">
-                      {video.title}
-                    </h3>
-                    <p className="text-gray-600 text-sm">
-                      {video.description}
+                ยกเลิก
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
+
+      {loading ? (
+        <div className="py-24 text-center">
+          <Spinner className="mx-auto h-8 w-8" />
+          <p className="mt-4 text-sm text-slate-500">กำลังโหลดรายการวิดีโอ...</p>
+        </div>
+      ) : videos.length > 0 ? (
+        <div className="space-y-4">
+          {videos.map((video) => {
+            const activeLevel = video.adminLevel || video.suggestedLevel
+
+            return (
+              <article key={video.id} className="card p-6">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-slate-900">{video.title}</h3>
+                    {video.description && (
+                      <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
+                        {video.description}
+                      </p>
+                    )}
+                    <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-slate-500">
+                      <IconClock className="h-3.5 w-3.5" />
+                      {Math.round(video.duration / 60)} นาที
                     </p>
                   </div>
+
                   <div className="text-right">
-                    <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium mb-2">
-                      {video.duration}s
-                    </span>
+                    {activeLevel ? (
+                      <>
+                        <p className="mb-1.5 text-[11px] uppercase tracking-wider text-slate-500">
+                          {video.adminLevel ? 'ระดับที่กำหนด' : 'ระดับที่ AI เสนอ'}
+                        </p>
+                        <CefrBadge level={activeLevel} />
+                      </>
+                    ) : (
+                      <span className="text-xs text-slate-500">ยังไม่ระบุระดับ</span>
+                    )}
                   </div>
                 </div>
 
-                {/* AI Analysis Results */}
-                {video.analyzed ? (
-                  <div className="bg-green-50 border border-green-200 rounded p-4 mb-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium text-green-800 mb-2">
-                          ✓ AI Analysis Complete
-                        </p>
-                        <p className="text-sm text-gray-700 mb-3">
-                          <strong>Suggested Level:</strong>{' '}
-                          <span className="font-bold text-lg text-green-600">
-                            {video.suggestedLevel}
-                          </span>
-                        </p>
-                        <p className="text-sm text-gray-700">
-                          {video.analysisSummary}
-                        </p>
-                      </div>
-                      {video.adminLevel && (
-                        <div className="text-right">
-                          <p className="text-sm text-gray-600">Admin Level:</p>
-                          <p className="text-2xl font-bold text-blue-600">
-                            {video.adminLevel}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded p-4 mb-4">
-                    <p className="text-sm text-yellow-800">
-                      ⏳ Analyzing with AI...
-                    </p>
-                  </div>
-                )}
+                <div
+                  className={`mt-5 flex items-start gap-3 rounded-lg border px-4 py-3 text-sm ${
+                    video.analyzed
+                      ? 'border-slate-200 bg-slate-50 text-slate-700'
+                      : 'border-amber-200 bg-amber-50 text-amber-900'
+                  }`}
+                >
+                  <IconSparkle className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                  {video.analyzed ? (
+                    <span className="leading-relaxed">
+                      <strong className="font-semibold text-slate-900">
+                        ผลวิเคราะห์ AI:
+                      </strong>{' '}
+                      เสนอระดับ {video.suggestedLevel ?? '—'}
+                      {video.analysisSummary && ` — ${video.analysisSummary}`}
+                    </span>
+                  ) : (
+                    <span>กำลังรอผลวิเคราะห์จาก AI</span>
+                  )}
+                </div>
 
-                <div className="flex gap-2">
-                  <Link
-                    href={`/admin/videos/${video.id}`}
-                    className="flex-1 bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 text-center"
-                  >
-                    แก้ไข
-                  </Link>
+                <div className="mt-5 flex justify-end gap-3 border-t border-slate-200 pt-5">
                   <button
                     onClick={() => handleDelete(video.id)}
-                    className="flex-1 bg-red-600 text-white font-bold py-2 px-4 rounded hover:bg-red-700"
+                    className="btn btn-danger btn-sm"
                   >
                     ลบ
                   </button>
+                  <Link
+                    href={`/admin/videos/${video.id}`}
+                    className="btn btn-primary btn-sm"
+                  >
+                    แก้ไขระดับ
+                  </Link>
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-12 text-center">
-            <p className="text-blue-800 mb-4">ยังไม่มีวิดีโอ</p>
+              </article>
+            )
+          })}
+        </div>
+      ) : (
+        <EmptyState
+          title="ยังไม่มีวิดีโอในระบบ"
+          description="เริ่มต้นด้วยการอัปโหลดคลิปบทเรียนแรก ระบบจะวิเคราะห์ระดับ CEFR ให้อัตโนมัติ"
+          action={
             <button
               onClick={() => setShowUploadForm(true)}
-              className="inline-block bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700"
+              className="btn btn-primary"
             >
-              อัพโหลดวิดีโอแรก
+              อัปโหลดวิดีโอแรก
             </button>
-          </div>
-        )}
-      </div>
-    </div>
+          }
+        />
+      )}
+    </AdminShell>
   )
 }

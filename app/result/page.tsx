@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { CEFRLevel, CEFR_DESCRIPTIONS } from '@/lib/cefr'
+import { CEFRLevel, CEFR_DESCRIPTIONS, CEFR_LEVELS } from '@/lib/cefr'
+import { SiteHeader } from '@/components/site-header'
+import { SiteFooter } from '@/components/site-footer'
+import { CefrBadge, EmptyState, LoadingScreen } from '@/components/ui'
+import { IconArrowRight, IconCheck, IconClock, IconUser } from '@/components/icons'
 
 interface CourseVideo {
   id: string
@@ -53,179 +57,245 @@ export default function ResultPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p>กำลังคำนวณผลประเมินของคุณ...</p>
-        </div>
+      <div className="min-h-screen bg-slate-50">
+        <SiteHeader />
+        <LoadingScreen label="กำลังประมวลผลการประเมินของคุณ..." />
       </div>
     )
   }
 
   if (!result) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">ไม่สามารถโหลดผลประเมินของคุณ</p>
-          <Link href="/" className="text-blue-600 hover:underline">
-            กลับไปหน้าแรก
-          </Link>
+      <div className="min-h-screen bg-slate-50">
+        <SiteHeader />
+        <div className="container-narrow py-16">
+          <EmptyState
+            title="ไม่พบผลการประเมิน"
+            description="ยังไม่มีข้อมูลการประเมินในเซสชันนี้ กรุณาเริ่มทำแบบประเมินใหม่อีกครั้ง"
+            action={
+              <Link href="/" className="btn btn-primary">
+                กลับหน้าแรก
+              </Link>
+            }
+          />
         </div>
+        <SiteFooter />
       </div>
     )
   }
 
-  const getCefrColor = (level: CEFRLevel) => {
-    const colors: Record<CEFRLevel, string> = {
-      A1: 'from-blue-400 to-blue-600',
-      A2: 'from-cyan-400 to-blue-600',
-      B1: 'from-green-400 to-cyan-600',
-      B2: 'from-lime-400 to-green-600',
-      C1: 'from-yellow-400 to-lime-600',
-      C2: 'from-orange-400 to-red-600',
-    }
-    return colors[level] || 'from-blue-400 to-blue-600'
-  }
+  const levelIndex = CEFR_LEVELS.indexOf(result.cefrLevel)
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="container mx-auto px-4 max-w-3xl">
-        {/* CEFR Result */}
-        <div
-          className={`bg-gradient-to-r ${getCefrColor(
-            result.cefrLevel
-          )} rounded-lg shadow-lg p-12 text-white text-center mb-12`}
-        >
-          <h1 className="text-4xl font-bold mb-4">ผลประเมินของคุณ</h1>
-          <p className="text-6xl font-bold mb-4">{result.cefrLevel}</p>
-          <p className="text-xl mb-6">
-            {CEFR_DESCRIPTIONS[result.cefrLevel]}
-          </p>
+    <div className="min-h-screen bg-slate-50">
+      <SiteHeader />
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-white bg-opacity-20 rounded-lg p-4">
-              <p className="text-sm opacity-90">คำถามทั้งหมด</p>
-              <p className="text-2xl font-bold">{result.totalQuestions}</p>
+      {/* Report summary */}
+      <section className="border-b border-slate-200 bg-white">
+        <div className="container-page py-12">
+          <p className="eyebrow">รายงานผลการประเมิน</p>
+
+          <div className="mt-6 grid gap-10 lg:grid-cols-[1fr_1.1fr] lg:items-center">
+            <div>
+              <div className="flex items-end gap-5">
+                <span className="text-6xl font-semibold tracking-tight text-slate-900">
+                  {result.cefrLevel}
+                </span>
+                <div className="pb-2">
+                  <p className="text-base font-medium text-slate-900">
+                    {CEFR_DESCRIPTIONS[result.cefrLevel]}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    อ้างอิงกรอบมาตรฐาน CEFR
+                  </p>
+                </div>
+              </div>
+
+              <dl className="mt-8 grid grid-cols-3 divide-x divide-slate-200 overflow-hidden rounded-xl border border-slate-200">
+                <div className="px-5 py-4">
+                  <dt className="text-xs text-slate-500">ข้อทั้งหมด</dt>
+                  <dd className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">
+                    {result.totalQuestions}
+                  </dd>
+                </div>
+                <div className="px-5 py-4">
+                  <dt className="text-xs text-slate-500">ตอบถูก</dt>
+                  <dd className="mt-1 text-2xl font-semibold tabular-nums text-emerald-700">
+                    {result.correctAnswers}
+                  </dd>
+                </div>
+                <div className="px-5 py-4">
+                  <dt className="text-xs text-slate-500">ความแม่นยำ</dt>
+                  <dd className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">
+                    {result.accuracy}%
+                  </dd>
+                </div>
+              </dl>
             </div>
-            <div className="bg-white bg-opacity-20 rounded-lg p-4">
-              <p className="text-sm opacity-90">คำตอบถูก</p>
-              <p className="text-2xl font-bold">{result.correctAnswers}</p>
-            </div>
-            <div className="bg-white bg-opacity-20 rounded-lg p-4">
-              <p className="text-sm opacity-90">ความแม่นยำ</p>
-              <p className="text-2xl font-bold">{result.accuracy}%</p>
+
+            {/* Position on the CEFR scale */}
+            <div className="card p-6">
+              <p className="rule-label mb-5">ตำแหน่งบนกรอบระดับ CEFR</p>
+              <div className="flex items-end gap-2">
+                {CEFR_LEVELS.map((level, index) => {
+                  const reached = index <= levelIndex
+                  return (
+                    <div key={level} className="flex flex-1 flex-col items-center gap-2">
+                      <span
+                        className={`w-full rounded-t-sm transition-all ${
+                          index === levelIndex
+                            ? 'bg-brand-800'
+                            : reached
+                            ? 'bg-brand-300'
+                            : 'bg-slate-100'
+                        }`}
+                        style={{ height: `${28 + index * 16}px` }}
+                      />
+                      <span
+                        className={`text-xs font-semibold tabular-nums ${
+                          index === levelIndex ? 'text-brand-900' : 'text-slate-400'
+                        }`}
+                      >
+                        {level}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="mt-5 border-t border-slate-200 pt-4 text-xs leading-relaxed text-slate-500">
+                ระดับนี้คำนวณจากความแม่นยำรวมและความยากของข้อที่ทำได้
+                ทำแบบประเมินซ้ำเพื่อยืนยันผลได้ตลอดเวลา
+              </p>
             </div>
           </div>
         </div>
+      </section>
 
-        {/* Courses Recommendation */}
-        <div className="mb-12">
-          <h2 className="text-3xl font-bold mb-8 text-gray-800">
-            คอร์สเรียนที่เหมาะสมสำหรับคุณ
-          </h2>
-
-          {result.recommendations.length > 0 ? (
-            <div className="space-y-6">
-              {result.recommendations.map((course) => (
-                <div
-                  key={course.id}
-                  className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border-l-4 border-blue-600"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-800 mb-2">
-                        {course.title}
-                      </h3>
-                      {course.instructorName && (
-                        <p className="text-sm text-gray-600">
-                          สอนโดย: {course.instructorName}
-                        </p>
-                      )}
-                    </div>
-                    <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                      {course.minCefrLevel}+
-                    </span>
-                  </div>
-
-                  <p className="text-gray-700 mb-4">{course.description}</p>
-
-                  {course.learningOutcomes && (
-                    <div className="mb-4">
-                      <p className="font-semibold text-gray-800 mb-2">
-                        เนื้อหาที่จะเรียน:
-                      </p>
-                      <ul className="list-disc list-inside space-y-1">
-                        {course.learningOutcomes.map((outcome, idx) => (
-                          <li key={idx} className="text-gray-700 text-sm">
-                            {outcome}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {course.videos && course.videos.length > 0 && (
-                    <div className="mb-4 bg-gray-50 rounded-lg p-4">
-                      <p className="font-semibold text-gray-800 mb-2">
-                        คลิปในคอร์ส ({course.videos.length} คลิป):
-                      </p>
-                      <ol className="space-y-1">
-                        {course.videos.map((video, idx) => (
-                          <li
-                            key={video.id}
-                            className="text-sm text-gray-700 flex justify-between gap-4"
-                          >
-                            <span>
-                              {idx + 1}. {video.title}
-                            </span>
-                            <span className="text-gray-500 whitespace-nowrap">
-                              {Math.round(video.duration / 60)} นาที
-                            </span>
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600 text-sm">
-                      ⏱️ {course.duration} ชั่วโมง
-                    </span>
-                    <button className="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition-all">
-                      สมัครเรียน
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <p className="text-blue-800">
-                ยังไม่มีคอร์สเรียนที่พอเหมาะสม กรุณากลับมาตรวจสอบในภายหลังครับ
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Action Buttons */}
-        <div className="space-y-4">
+      {/* Recommendations */}
+      <section className="container-page py-14">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight">
+              คอร์สเรียนที่แนะนำสำหรับระดับของคุณ
+            </h2>
+            <p className="mt-2 text-sm text-slate-600">
+              คัดเลือกจากคอร์สที่กำหนดระดับขั้นต่ำไม่เกินระดับที่คุณประเมินได้
+            </p>
+          </div>
           <Link
-            href="/"
-            className="block bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition-all text-center"
+            href="/courses"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-800 hover:underline"
           >
-            กลับไปหน้าแรก
+            ดูคอร์สทั้งหมด
+            <IconArrowRight className="h-4 w-4" />
           </Link>
-          <button
-            onClick={() => {
-              // Reset assessment and start again
-              window.location.href = '/'
-            }}
-            className="w-full bg-gray-300 text-gray-800 font-bold py-3 px-6 rounded-lg hover:bg-gray-400 transition-all"
-          >
-            ทำการประเมินใหม่
-          </button>
         </div>
-      </div>
+
+        {result.recommendations.length > 0 ? (
+          <div className="mt-8 space-y-4">
+            {result.recommendations.map((course) => (
+              <article key={course.id} className="card card-hover p-6">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-900">
+                      {course.title}
+                    </h3>
+                    <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-slate-500">
+                      {course.instructorName && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <IconUser className="h-3.5 w-3.5" />
+                          {course.instructorName}
+                        </span>
+                      )}
+                      <span className="inline-flex items-center gap-1.5">
+                        <IconClock className="h-3.5 w-3.5" />
+                        {course.duration} ชั่วโมง
+                      </span>
+                    </div>
+                  </div>
+                  <CefrBadge level={course.minCefrLevel} suffix="+" />
+                </div>
+
+                <p className="mt-4 text-sm leading-relaxed text-slate-600">
+                  {course.description}
+                </p>
+
+                {course.learningOutcomes && course.learningOutcomes.length > 0 && (
+                  <div className="mt-5">
+                    <p className="rule-label mb-3">สิ่งที่จะได้เรียนรู้</p>
+                    <ul className="grid gap-2 sm:grid-cols-2">
+                      {course.learningOutcomes.map((outcome, idx) => (
+                        <li
+                          key={idx}
+                          className="flex items-start gap-2 text-sm text-slate-700"
+                        >
+                          <IconCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-700" />
+                          <span>{outcome}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {course.videos && course.videos.length > 0 && (
+                  <div className="mt-5 overflow-hidden rounded-lg border border-slate-200">
+                    <p className="border-b border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      บทเรียนในคอร์ส ({course.videos.length} คลิป)
+                    </p>
+                    <ol className="divide-y divide-slate-100">
+                      {course.videos.map((video, idx) => (
+                        <li
+                          key={video.id}
+                          className="flex items-center justify-between gap-4 px-4 py-2.5 text-sm"
+                        >
+                          <span className="flex min-w-0 items-center gap-3">
+                            <span className="w-5 shrink-0 text-right text-xs tabular-nums text-slate-400">
+                              {idx + 1}
+                            </span>
+                            <span className="truncate text-slate-700">
+                              {video.title}
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-xs tabular-nums text-slate-500">
+                            {Math.round(video.duration / 60)} นาที
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+
+                <div className="mt-6 flex justify-end border-t border-slate-200 pt-5">
+                  <button className="btn btn-primary btn-sm">ลงทะเบียนเรียน</button>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-8">
+            <EmptyState
+              title="ยังไม่มีคอร์สที่ตรงกับระดับนี้"
+              description="ทีมงานกำลังเพิ่มคอร์สสำหรับระดับของคุณ ระหว่างนี้สามารถดูคอร์สทั้งหมดที่เปิดสอนได้"
+              action={
+                <Link href="/courses" className="btn btn-secondary">
+                  ดูคอร์สทั้งหมด
+                </Link>
+              }
+            />
+          </div>
+        )}
+
+        <div className="mt-10 flex flex-col gap-3 border-t border-slate-200 pt-8 sm:flex-row">
+          <Link href="/dashboard" className="btn btn-primary">
+            ไปยังความก้าวหน้าของฉัน
+          </Link>
+          <Link href="/" className="btn btn-secondary">
+            ทำแบบประเมินอีกครั้ง
+          </Link>
+        </div>
+      </section>
+
+      <SiteFooter />
     </div>
   )
 }

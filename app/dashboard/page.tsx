@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { CEFR_DESCRIPTIONS, CEFRLevel } from '@/lib/cefr'
+import { CEFR_DESCRIPTIONS, CEFR_LEVELS, CEFRLevel } from '@/lib/cefr'
+import { SiteHeader } from '@/components/site-header'
+import { SiteFooter } from '@/components/site-footer'
+import { EmptyState, LoadingScreen, PageHeader, StatCard } from '@/components/ui'
+import { IconArrowRight, IconChart, IconTarget } from '@/components/icons'
 
 interface DashboardData {
   currentLevel: CEFRLevel
@@ -39,100 +43,172 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p>กำลังโหลดข้อมูลของคุณ...</p>
-        </div>
+      <div className="min-h-screen bg-slate-50">
+        <SiteHeader />
+        <LoadingScreen label="กำลังโหลดข้อมูลของคุณ..." />
       </div>
     )
   }
 
+  const levelIndex = data ? CEFR_LEVELS.indexOf(data.currentLevel) : -1
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="container mx-auto px-4 max-w-3xl">
-        {/* Header */}
-        <div className="mb-12">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">แดชบอร์ด</h1>
-          <p className="text-gray-600">ดูความก้าวหน้าการเรียนภาษาอังกฤษของคุณ</p>
-        </div>
+    <div className="min-h-screen bg-slate-50">
+      <SiteHeader />
+
+      <main className="container-page py-10">
+        <PageHeader
+          eyebrow="ความก้าวหน้า"
+          title="ภาพรวมของฉัน"
+          description="สรุปผลการประเมินระดับภาษาอังกฤษและขั้นตอนถัดไปที่แนะนำ"
+          actions={
+            <Link href="/" className="btn btn-primary btn-sm">
+              เริ่มการประเมินใหม่
+            </Link>
+          }
+        />
 
         {data ? (
-          <div className="space-y-8">
-            {/* Current Level Card */}
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-lg p-8 text-white">
-              <p className="text-sm opacity-90 mb-2">ระดับปัจจุบัน</p>
-              <p className="text-5xl font-bold mb-4">{data.currentLevel}</p>
-              <p className="text-lg">
-                {CEFR_DESCRIPTIONS[data.currentLevel] || 'Unknown Level'}
-              </p>
-            </div>
-
-            {/* Stats Grid */}
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="bg-white rounded-lg shadow p-6">
-                <p className="text-gray-600 text-sm mb-2">จำนวนการประเมิน</p>
-                <p className="text-4xl font-bold text-blue-600">{data.totalAssessments}</p>
-              </div>
-              <div className="bg-white rounded-lg shadow p-6">
-                <p className="text-gray-600 text-sm mb-2">คะแนนสูงสุด</p>
-                <p className="text-4xl font-bold text-green-600">{data.bestScore}%</p>
-              </div>
-            </div>
-
-            {/* Recent Assessment */}
-            {data.recentAssessment && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-bold text-gray-800 mb-4">
-                  การประเมินล่าสุด
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">วันที่:</span>
-                    <span className="font-medium">
-                      {new Date(data.recentAssessment.date).toLocaleDateString('th-TH')}
-                    </span>
+          <div className="mt-8 space-y-8">
+            {/* Level panel */}
+            <section className="overflow-hidden rounded-xl border border-slate-200 bg-brand-950 text-white">
+              <div className="hero-grid relative">
+                <div className="relative grid gap-8 p-8 lg:grid-cols-[auto_1fr] lg:items-center">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-white/55">
+                      ระดับปัจจุบัน
+                    </p>
+                    <p className="mt-2 text-5xl font-semibold tracking-tight text-white">
+                      {data.currentLevel}
+                    </p>
+                    <p className="mt-2 text-sm text-white/70">
+                      {CEFR_DESCRIPTIONS[data.currentLevel] || 'ยังไม่ระบุระดับ'}
+                    </p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">ระดับ:</span>
-                    <span className="font-medium">{data.recentAssessment.level}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">ความแม่นยำ:</span>
-                    <span className="font-medium">{data.recentAssessment.accuracy}%</span>
+
+                  <div className="lg:border-l lg:border-white/10 lg:pl-8">
+                    <p className="mb-4 text-[11px] uppercase tracking-[0.16em] text-white/55">
+                      เส้นทางระดับ
+                    </p>
+                    <ol className="flex items-center gap-2">
+                      {CEFR_LEVELS.map((level, index) => (
+                        <li key={level} className="flex flex-1 flex-col gap-2">
+                          <span
+                            className={`h-1.5 rounded-full ${
+                              index <= levelIndex ? 'bg-white' : 'bg-white/15'
+                            }`}
+                          />
+                          <span
+                            className={`text-xs font-semibold tabular-nums ${
+                              index === levelIndex ? 'text-white' : 'text-white/40'
+                            }`}
+                          >
+                            {level}
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
                   </div>
                 </div>
               </div>
+            </section>
+
+            {/* Stats */}
+            <section className="grid gap-5 sm:grid-cols-2">
+              <StatCard
+                label="จำนวนการประเมิน"
+                value={data.totalAssessments}
+                hint="ครั้งที่ทำแบบประเมินทั้งหมด"
+                icon={<IconTarget className="h-5 w-5" />}
+              />
+              <StatCard
+                label="คะแนนสูงสุด"
+                value={`${data.bestScore}%`}
+                hint="ความแม่นยำสูงสุดที่ทำได้"
+                icon={<IconChart className="h-5 w-5" />}
+              />
+            </section>
+
+            {/* Recent assessment */}
+            {data.recentAssessment && (
+              <section className="card overflow-hidden">
+                <h2 className="border-b border-slate-200 px-6 py-4 text-sm font-semibold text-slate-900">
+                  การประเมินล่าสุด
+                </h2>
+                <dl className="divide-y divide-slate-100">
+                  <div className="flex items-center justify-between px-6 py-3.5 text-sm">
+                    <dt className="text-slate-500">วันที่</dt>
+                    <dd className="font-medium tabular-nums text-slate-900">
+                      {new Date(data.recentAssessment.date).toLocaleDateString('th-TH', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between px-6 py-3.5 text-sm">
+                    <dt className="text-slate-500">ระดับที่ประเมินได้</dt>
+                    <dd className="font-medium text-slate-900">
+                      {data.recentAssessment.level}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between px-6 py-3.5 text-sm">
+                    <dt className="text-slate-500">ความแม่นยำ</dt>
+                    <dd className="font-medium tabular-nums text-slate-900">
+                      {data.recentAssessment.accuracy}%
+                    </dd>
+                  </div>
+                </dl>
+              </section>
             )}
 
-            {/* Action Buttons */}
-            <div className="space-y-3">
-              <Link
-                href="/"
-                className="block bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition-all text-center"
-              >
-                ทำการประเมินใหม่
+            {/* Next steps */}
+            <section className="grid gap-5 sm:grid-cols-2">
+              <Link href="/" className="card card-hover flex items-start gap-4 p-6">
+                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-800">
+                  <IconTarget />
+                </span>
+                <span>
+                  <span className="block font-semibold text-slate-900">
+                    ประเมินระดับอีกครั้ง
+                  </span>
+                  <span className="mt-1 block text-sm text-slate-600">
+                    ทบทวนระดับปัจจุบันของคุณด้วยชุดคำถามใหม่
+                  </span>
+                </span>
               </Link>
-              <Link
-                href="/courses"
-                className="block bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition-all text-center"
-              >
-                ดูคอร์สเรียน
+
+              <Link href="/courses" className="card card-hover flex items-start gap-4 p-6">
+                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-800">
+                  <IconArrowRight />
+                </span>
+                <span>
+                  <span className="block font-semibold text-slate-900">
+                    เลือกคอร์สเรียน
+                  </span>
+                  <span className="mt-1 block text-sm text-slate-600">
+                    ดูคอร์สที่เหมาะกับระดับ {data.currentLevel} ของคุณ
+                  </span>
+                </span>
               </Link>
-            </div>
+            </section>
           </div>
         ) : (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-            <p className="text-blue-800 mb-4">ไม่พบข้อมูลการประเมิน</p>
-            <Link
-              href="/"
-              className="inline-block bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-all"
-            >
-              เริ่มการประเมินครั้งแรก
-            </Link>
+          <div className="mt-8">
+            <EmptyState
+              title="ยังไม่มีข้อมูลการประเมิน"
+              description="เริ่มทำแบบประเมินครั้งแรกเพื่อดูระดับ CEFR และคอร์สเรียนที่แนะนำสำหรับคุณ"
+              action={
+                <Link href="/" className="btn btn-primary">
+                  เริ่มการประเมินครั้งแรก
+                </Link>
+              }
+            />
           </div>
         )}
-      </div>
+      </main>
+
+      <SiteFooter />
     </div>
   )
 }

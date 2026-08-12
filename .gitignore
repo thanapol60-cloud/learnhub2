@@ -30,9 +30,13 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
+# typescript
+*.tsbuildinfo
+
 # IDE
 .vscode
 .idea
+.claude
 *.swp
 *.swo
 *~

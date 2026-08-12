@@ -2,119 +2,129 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { AdminShell } from '@/components/admin-shell'
+import { StatCard } from '@/components/ui'
+import {
+  IconArrowRight,
+  IconBook,
+  IconChart,
+  IconSparkle,
+  IconUsers,
+  IconVideo,
+} from '@/components/icons'
+
+const SECTIONS = [
+  {
+    href: '/admin/videos',
+    icon: IconVideo,
+    title: 'คลังวิดีโอ',
+    body: 'อัปโหลดคลิปบทเรียน ตรวจสอบระดับที่ AI วิเคราะห์ และปรับระดับด้วยตนเอง',
+  },
+  {
+    href: '/admin/courses',
+    icon: IconBook,
+    title: 'คอร์สเรียน',
+    body: 'สร้างคอร์ส กำหนดช่วงระดับ CEFR และจัดกลุ่มวิดีโอเข้าคอร์ส',
+  },
+  {
+    href: '/admin/analytics',
+    icon: IconChart,
+    title: 'สถิติผู้เรียน',
+    body: 'ติดตามจำนวนผู้เรียน การกระจายระดับ และการลงทะเบียนคอร์ส',
+  },
+]
 
 export default function AdminDashboard() {
-  const router = useRouter()
-  const [loading, setLoading] = useState(true)
+  const [videoCount, setVideoCount] = useState<number | null>(null)
+  const [courseCount, setCourseCount] = useState<number | null>(null)
+  const [learnerCount, setLearnerCount] = useState<number | null>(null)
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const response = await fetch('/api/auth/me')
-        if (!response.ok) {
-          router.push('/login')
-        } else {
-          const data = await response.json()
-          if (data.user.role !== 'admin') {
-            router.push('/dashboard')
-          }
+    const load = async () => {
+      const safeJson = async (url: string) => {
+        try {
+          const res = await fetch(url)
+          return res.ok ? await res.json() : null
+        } catch {
+          return null
         }
-      } catch (error) {
-        router.push('/login')
-      } finally {
-        setLoading(false)
       }
+
+      const [videos, courses, analytics] = await Promise.all([
+        safeJson('/api/admin/videos'),
+        safeJson('/api/admin/courses'),
+        safeJson('/api/admin/analytics'),
+      ])
+
+      setVideoCount(videos?.videos?.length ?? 0)
+      setCourseCount(courses?.courses?.length ?? 0)
+      setLearnerCount(analytics?.totalUsers ?? 0)
     }
 
-    checkAuth()
-  }, [router])
+    load()
+  }, [])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p>กำลังโหลด...</p>
-        </div>
-      </div>
-    )
-  }
+  const show = (value: number | null) => (value === null ? '—' : value)
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
-          <button
-            onClick={async () => {
-              await fetch('/api/auth/logout', { method: 'POST' })
-              router.push('/')
-            }}
-            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-          >
-            ออกจากระบบ
-          </button>
+    <AdminShell
+      title="ภาพรวมระบบ"
+      description="จัดการเนื้อหาการเรียนและติดตามผลการใช้งานของผู้เรียนทั้งหมดในที่เดียว"
+    >
+      <section className="grid gap-5 sm:grid-cols-3">
+        <StatCard
+          label="วิดีโอในระบบ"
+          value={show(videoCount)}
+          icon={<IconVideo className="h-5 w-5" />}
+        />
+        <StatCard
+          label="คอร์สที่เปิดสอน"
+          value={show(courseCount)}
+          icon={<IconBook className="h-5 w-5" />}
+        />
+        <StatCard
+          label="ผู้เรียนทั้งหมด"
+          value={show(learnerCount)}
+          icon={<IconUsers className="h-5 w-5" />}
+        />
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
+          การจัดการ
+        </h2>
+        <div className="mt-4 grid gap-5 md:grid-cols-3">
+          {SECTIONS.map(({ href, icon: Icon, title, body }) => (
+            <Link key={href} href={href} className="card card-hover group p-6">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-800">
+                <Icon />
+              </span>
+              <h3 className="mt-5 font-semibold text-slate-900">{title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">{body}</p>
+              <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-brand-800">
+                เปิดหน้าจัดการ
+                <IconArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </span>
+            </Link>
+          ))}
         </div>
-      </header>
+      </section>
 
-      <div className="container mx-auto px-4 py-12">
-        {/* Quick Stats */}
-        <div className="grid md:grid-cols-2 gap-6 mb-12">
-          <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-gray-600 text-sm mb-2">วิดีโอทั้งหมด</p>
-            <p className="text-4xl font-bold text-blue-600">-</p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-gray-600 text-sm mb-2">คอร์สทั้งหมด</p>
-            <p className="text-4xl font-bold text-green-600">-</p>
-          </div>
+      <section className="card mt-10 flex items-start gap-4 p-6">
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
+          <IconSparkle />
+        </span>
+        <div>
+          <h3 className="font-semibold text-slate-900">
+            การวิเคราะห์ระดับด้วย AI
+          </h3>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
+            เมื่ออัปโหลดวิดีโอ ระบบจะวิเคราะห์ชื่อเรื่องและคำอธิบายเพื่อเสนอระดับ CEFR
+            พร้อมเหตุผลประกอบ ผู้ดูแลสามารถยืนยันหรือกำหนดระดับใหม่ได้เสมอ
+            ระดับที่ผู้ดูแลกำหนดจะถูกใช้เป็นค่าหลักในการแนะนำคอร์ส
+          </p>
         </div>
-
-        {/* Navigation */}
-        <div className="grid md:grid-cols-3 gap-6">
-          <Link
-            href="/admin/videos"
-            className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-all"
-          >
-            <div className="text-4xl mb-4">🎬</div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">วิดีโอ</h3>
-            <p className="text-gray-600 mb-4">อัพโหลดและจัดการวิดีโอเรียน</p>
-            <span className="text-blue-600 font-medium">ไปยังหน้า →</span>
-          </Link>
-
-          <Link
-            href="/admin/courses"
-            className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-all"
-          >
-            <div className="text-4xl mb-4">📚</div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">คอร์ส</h3>
-            <p className="text-gray-600 mb-4">สร้างและจัดการคอร์สเรียน</p>
-            <span className="text-blue-600 font-medium">ไปยังหน้า →</span>
-          </Link>
-
-          <Link
-            href="/admin/analytics"
-            className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-all"
-          >
-            <div className="text-4xl mb-4">📊</div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">สถิติ</h3>
-            <p className="text-gray-600 mb-4">ดูสถิติการเรียนของผู้เรียน</p>
-            <span className="text-blue-600 font-medium">ไปยังหน้า →</span>
-          </Link>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="mt-12 bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">เพิ่มเติม</h3>
-          <ul className="space-y-2 text-gray-600">
-            <li>✓ สามารถอัพโหลดวิดีโอ และ AI จะวิเคราะห์ระดับอัตโนมัติ</li>
-            <li>✓ สามารถสร้างคอร์สจากวิดีโอและเลือกระดับ CEFR</li>
-            <li>✓ ดูสถิติผู้เรียนและความก้าวหน้า</li>
-          </ul>
-        </div>
-      </div>
-    </div>
+      </section>
+    </AdminShell>
   )
 }

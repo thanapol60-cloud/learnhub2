@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { AdminShell } from '@/components/admin-shell'
+import { EmptyState, Spinner, StatCard } from '@/components/ui'
+import { IconBook, IconChart, IconLayers, IconUsers } from '@/components/icons'
+import { CEFR_LEVELS } from '@/lib/cefr'
 
 interface LearnerStats {
   totalUsers: number
@@ -13,166 +15,133 @@ interface LearnerStats {
 }
 
 export default function AdminAnalyticsPage() {
-  const router = useRouter()
   const [stats, setStats] = useState<LearnerStats | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const fetchStats = async () => {
       try {
-        const response = await fetch('/api/auth/me')
-        if (!response.ok) {
-          router.push('/login')
-        } else {
-          const data = await response.json()
-          if (data.user.role !== 'admin') {
-            router.push('/dashboard')
-          }
+        const response = await fetch('/api/admin/analytics')
+        if (response.ok) {
+          setStats(await response.json())
         }
       } catch (error) {
-        router.push('/login')
+        console.error('Failed to fetch stats:', error)
       } finally {
         setLoading(false)
       }
     }
 
-    checkAuth()
-  }, [router])
-
-  useEffect(() => {
     fetchStats()
   }, [])
 
-  const fetchStats = async () => {
-    try {
-      const response = await fetch('/api/admin/analytics')
-      if (response.ok) {
-        const data = await response.json()
-        setStats(data)
-      }
-    } catch (error) {
-      console.error('Failed to fetch stats:', error)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p>กำลังโหลด...</p>
-        </div>
-      </div>
-    )
-  }
+  const total = stats
+    ? Object.values(stats.levelDistribution).reduce((a, b) => a + b, 0)
+    : 0
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="container mx-auto px-4 py-4">
-          <Link href="/admin/dashboard" className="text-blue-600 hover:text-blue-700">
-            ← กลับ
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-800">สถิติผู้เรียน</h1>
+    <AdminShell
+      title="สถิติผู้เรียน"
+      description="ภาพรวมการใช้งานและการกระจายระดับความสามารถของผู้เรียนในระบบ"
+    >
+      {loading ? (
+        <div className="py-24 text-center">
+          <Spinner className="mx-auto h-8 w-8" />
+          <p className="mt-4 text-sm text-slate-500">กำลังโหลดสถิติ...</p>
         </div>
-      </header>
+      ) : stats ? (
+        <div className="space-y-8">
+          <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              label="ผู้เรียนทั้งหมด"
+              value={stats.totalUsers}
+              icon={<IconUsers className="h-5 w-5" />}
+            />
+            <StatCard
+              label="การประเมินที่เสร็จสิ้น"
+              value={stats.assessmentsCompleted}
+              icon={<IconChart className="h-5 w-5" />}
+            />
+            <StatCard
+              label="การลงทะเบียนคอร์ส"
+              value={stats.courseEnrollments}
+              icon={<IconBook className="h-5 w-5" />}
+            />
+            <StatCard
+              label="ระดับเฉลี่ย"
+              value={stats.averageLevel}
+              icon={<IconLayers className="h-5 w-5" />}
+            />
+          </section>
 
-      <div className="container mx-auto px-4 py-12">
-        {stats ? (
-          <div className="space-y-8">
-            {/* Key Metrics */}
-            <div className="grid md:grid-cols-4 gap-6">
-              <div className="bg-white rounded-lg shadow p-6">
-                <p className="text-gray-600 text-sm mb-2">ผู้เรียนทั้งหมด</p>
-                <p className="text-4xl font-bold text-blue-600">
-                  {stats.totalUsers}
-                </p>
-              </div>
-              <div className="bg-white rounded-lg shadow p-6">
-                <p className="text-gray-600 text-sm mb-2">การประเมินเสร็จแล้ว</p>
-                <p className="text-4xl font-bold text-green-600">
-                  {stats.assessmentsCompleted}
-                </p>
-              </div>
-              <div className="bg-white rounded-lg shadow p-6">
-                <p className="text-gray-600 text-sm mb-2">การลงทะเบียนคอร์ส</p>
-                <p className="text-4xl font-bold text-purple-600">
-                  {stats.courseEnrollments}
-                </p>
-              </div>
-              <div className="bg-white rounded-lg shadow p-6">
-                <p className="text-gray-600 text-sm mb-2">ระดับเฉลี่ย</p>
-                <p className="text-4xl font-bold text-orange-600">
-                  {stats.averageLevel}
-                </p>
-              </div>
-            </div>
-
-            {/* Level Distribution */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-6">
-                การกระจายตัวของระดับ
+          <section className="card overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+              <h2 className="text-sm font-semibold text-slate-900">
+                การกระจายตัวของระดับ CEFR
               </h2>
-              <div className="space-y-4">
-                {Object.entries(stats.levelDistribution)
-                  .sort()
-                  .map(([level, count]) => {
-                    const total = Object.values(stats.levelDistribution).reduce(
-                      (a, b) => a + b,
-                      0
-                    )
-                    const percentage = total > 0 ? (count / total) * 100 : 0
-
-                    return (
-                      <div key={level}>
-                        <div className="flex justify-between mb-2">
-                          <span className="font-medium text-gray-700">
-                            {level}
-                          </span>
-                          <span className="text-gray-600">
-                            {count} ผู้เรียน ({percentage.toFixed(1)}%)
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full transition-all"
-                            style={{ width: `${percentage}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    )
-                  })}
-              </div>
+              <span className="text-xs text-slate-500">
+                ฐานข้อมูล {total} ผู้เรียน
+              </span>
             </div>
 
-            {/* Insights */}
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <h3 className="font-bold text-blue-800 mb-3">💡 Insights</h3>
-                <ul className="space-y-2 text-blue-700 text-sm">
-                  <li>• อัพเดตความเข้าใจเกี่ยวกับระดับทั่วไปของผู้เรียน</li>
-                  <li>• ติดตามการมีส่วนร่วมของผู้เรียนในคอร์ส</li>
-                  <li>• ปรับปรุงเนื้อหาตามความต้องการของผู้เรียน</li>
-                </ul>
-              </div>
+            <div className="divide-y divide-slate-100">
+              {CEFR_LEVELS.map((level) => {
+                const count = stats.levelDistribution[level] ?? 0
+                const percentage = total > 0 ? (count / total) * 100 : 0
 
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                <h3 className="font-bold text-green-800 mb-3">✅ Next Steps</h3>
-                <ul className="space-y-2 text-green-700 text-sm">
-                  <li>• สร้างคอร์สสำหรับระดับที่มีผู้เรียนน้อยที่สุด</li>
-                  <li>• เพิ่มวิดีโอเพื่อสนับสนุนระดับที่ได้รับความนิยมมากที่สุด</li>
-                  <li>• ทำการสำรวจความพึงพอใจของผู้เรียน</li>
-                </ul>
-              </div>
+                return (
+                  <div
+                    key={level}
+                    className="flex items-center gap-5 px-6 py-4 text-sm"
+                  >
+                    <span className="w-8 shrink-0 font-semibold tabular-nums text-slate-900">
+                      {level}
+                    </span>
+                    <span className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+                      <span
+                        className="block h-full rounded-full bg-brand-700 transition-all duration-500"
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </span>
+                    <span className="w-32 shrink-0 text-right tabular-nums text-slate-600">
+                      {count} คน ({percentage.toFixed(1)}%)
+                    </span>
+                  </div>
+                )
+              })}
             </div>
-          </div>
-        ) : (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-12 text-center">
-            <p className="text-blue-800">ยังไม่มีข้อมูลสถิติ</p>
-          </div>
-        )}
-      </div>
-    </div>
+          </section>
+
+          <section className="grid gap-5 md:grid-cols-2">
+            <div className="card p-6">
+              <h3 className="text-sm font-semibold text-slate-900">
+                ข้อสังเกตจากข้อมูล
+              </h3>
+              <ul className="mt-4 space-y-2.5 text-sm text-slate-600">
+                <li>• ระดับที่พบมากที่สุดสะท้อนกลุ่มผู้เรียนหลักของแพลตฟอร์ม</li>
+                <li>• จำนวนการประเมินเทียบกับผู้เรียนบอกอัตราการทำซ้ำ</li>
+                <li>• การลงทะเบียนคอร์สบอกความต่อเนื่องหลังทราบผล</li>
+              </ul>
+            </div>
+
+            <div className="card p-6">
+              <h3 className="text-sm font-semibold text-slate-900">
+                สิ่งที่ควรดำเนินการต่อ
+              </h3>
+              <ul className="mt-4 space-y-2.5 text-sm text-slate-600">
+                <li>• เพิ่มคอร์สสำหรับระดับที่ยังมีเนื้อหารองรับน้อย</li>
+                <li>• เสริมวิดีโอในระดับที่มีผู้เรียนหนาแน่นที่สุด</li>
+                <li>• ทบทวนคลังคำถามในระดับที่มีอัตราตอบผิดสูง</li>
+              </ul>
+            </div>
+          </section>
+        </div>
+      ) : (
+        <EmptyState
+          title="ยังไม่มีข้อมูลสถิติ"
+          description="ข้อมูลจะปรากฏเมื่อมีผู้เรียนเริ่มทำแบบประเมินในระบบ"
+        />
+      )}
+    </AdminShell>
   )
 }

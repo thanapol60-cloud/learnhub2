@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
-
-const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
+import { AdminShell } from '@/components/admin-shell'
+import { BackLink, EmptyState, Spinner } from '@/components/ui'
+import { IconSparkle } from '@/components/icons'
+import { CEFR_LEVELS } from '@/lib/cefr'
 
 interface Video {
   id: string
@@ -33,6 +35,7 @@ export default function EditVideoPage() {
   const [selectedCourse, setSelectedCourse] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   useEffect(() => {
     const fetchData = async () => {
@@ -40,12 +43,12 @@ export default function EditVideoPage() {
         const videoRes = await fetch(`/api/admin/videos`)
         if (videoRes.ok) {
           const videoData = await videoRes.json()
-          const foundVideo = videoData.videos.find(
-            (v: Video) => v.id === videoId
-          )
+          const foundVideo = videoData.videos.find((v: Video) => v.id === videoId)
           if (foundVideo) {
             setVideo(foundVideo)
-            setSelectedLevel(foundVideo.adminLevel || foundVideo.suggestedLevel || '')
+            setSelectedLevel(
+              foundVideo.adminLevel || foundVideo.suggestedLevel || ''
+            )
             setSelectedCourse(foundVideo.courseId || '')
           }
         }
@@ -69,6 +72,7 @@ export default function EditVideoPage() {
     if (!video || !selectedLevel) return
 
     setSaving(true)
+    setSaveError('')
     try {
       const response = await fetch(`/api/admin/videos/${videoId}`, {
         method: 'PATCH',
@@ -80,138 +84,143 @@ export default function EditVideoPage() {
       })
 
       if (response.ok) {
-        alert('บันทึกสำเร็จ')
         router.push('/admin/videos')
+      } else {
+        setSaveError('บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง')
       }
     } catch (error) {
       console.error('Save failed:', error)
-      alert('บันทึกล้มเหลว')
+      setSaveError('เกิดข้อผิดพลาดในการเชื่อมต่อ')
     } finally {
       setSaving(false)
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p>กำลังโหลด...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!video) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">ไม่พบวิดีโอ</p>
-          <Link href="/admin/videos" className="text-blue-600 hover:underline">
-            กลับไปหน้าวิดีโอ
-          </Link>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="container mx-auto px-4 py-4">
-          <Link href="/admin/videos" className="text-blue-600 hover:text-blue-700">
-            ← กลับ
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-800">แก้ไขวิดีโอ</h1>
+    <AdminShell
+      title="กำหนดระดับวิดีโอ"
+      description="ยืนยันหรือแก้ไขระดับ CEFR ที่ระบบวิเคราะห์ไว้ และผูกวิดีโอเข้ากับคอร์ส"
+      actions={<BackLink href="/admin/videos">กลับไปคลังวิดีโอ</BackLink>}
+    >
+      {loading ? (
+        <div className="py-24 text-center">
+          <Spinner className="mx-auto h-8 w-8" />
+          <p className="mt-4 text-sm text-slate-500">กำลังโหลดข้อมูลวิดีโอ...</p>
         </div>
-      </header>
+      ) : !video ? (
+        <EmptyState
+          title="ไม่พบวิดีโอนี้"
+          description="วิดีโออาจถูกลบไปแล้ว หรือลิงก์ไม่ถูกต้อง"
+          action={
+            <Link href="/admin/videos" className="btn btn-primary">
+              กลับไปคลังวิดีโอ
+            </Link>
+          }
+        />
+      ) : (
+        <div className="max-w-2xl space-y-6">
+          <section className="card p-6">
+            <h2 className="text-lg font-semibold text-slate-900">{video.title}</h2>
+            {video.description && (
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                {video.description}
+              </p>
+            )}
+          </section>
 
-      <div className="container mx-auto px-4 py-12 max-w-2xl">
-        <div className="bg-white rounded-lg shadow p-8">
-          {/* Video Info */}
-          <div className="mb-8">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">
-              {video.title}
-            </h2>
-            <p className="text-gray-600">{video.description}</p>
-          </div>
-
-          {/* AI Suggestion */}
           {video.suggestedLevel && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-8">
-              <p className="font-medium text-green-800 mb-2">
-                ✓ Suggested by AI Analysis
-              </p>
-              <p className="text-3xl font-bold text-green-600">
-                {video.suggestedLevel}
-              </p>
-              <p className="text-sm text-gray-700 mt-3">
-                {video.analysisSummary}
-              </p>
-            </div>
+            <section className="card flex items-start gap-4 p-6">
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
+                <IconSparkle />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-slate-900">
+                  ระดับที่ AI เสนอ:{' '}
+                  <span className="tabular-nums">{video.suggestedLevel}</span>
+                </p>
+                {video.analysisSummary && (
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    {video.analysisSummary}
+                  </p>
+                )}
+              </div>
+            </section>
           )}
 
-          {/* Form */}
-          <div className="space-y-6">
-            <div>
-              <label className="block text-gray-700 font-bold mb-3">
-                เลือกระดับ CEFR
-              </label>
-              <div className="grid grid-cols-3 gap-3">
-                {CEFR_LEVELS.map((level) => (
-                  <button
-                    key={level}
-                    onClick={() => setSelectedLevel(level)}
-                    className={`py-3 px-4 rounded-lg font-bold transition-all ${
-                      selectedLevel === level
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                    }`}
-                  >
-                    {level}
-                  </button>
-                ))}
+          <section className="card overflow-hidden">
+            <h2 className="border-b border-slate-200 px-6 py-4 text-sm font-semibold text-slate-900">
+              การกำหนดค่า
+            </h2>
+
+            <div className="space-y-6 p-6">
+              <div>
+                <span className="label">ระดับ CEFR ที่ใช้จริง</span>
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                  {CEFR_LEVELS.map((level) => (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={() => setSelectedLevel(level)}
+                      className={`rounded-lg border py-2.5 text-sm font-semibold tabular-nums transition-colors ${
+                        selectedLevel === level
+                          ? 'border-brand-800 bg-brand-800 text-white'
+                          : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
+                      }`}
+                    >
+                      {level}
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              <div>
+                <label htmlFor="course" className="label">
+                  ผูกเข้ากับคอร์ส (ไม่บังคับ)
+                </label>
+                <select
+                  id="course"
+                  value={selectedCourse}
+                  onChange={(e) => setSelectedCourse(e.target.value)}
+                  className="input"
+                >
+                  <option value="">ไม่ผูกกับคอร์สใด</option>
+                  {courses.map((course) => (
+                    <option key={course.id} value={course.id}>
+                      {course.title} ({course.minCefrLevel}+)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {saveError && (
+                <div className="notice notice-error" role="alert">
+                  {saveError}
+                </div>
+              )}
             </div>
 
-            <div>
-              <label className="block text-gray-700 font-bold mb-2">
-                เพิ่มลงในคอร์ส (optional)
-              </label>
-              <select
-                value={selectedCourse}
-                onChange={(e) => setSelectedCourse(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            <div className="flex gap-3 border-t border-slate-200 px-6 py-5">
+              <button
+                onClick={handleSave}
+                disabled={saving || !selectedLevel}
+                className="btn btn-primary"
               >
-                <option value="">-- เลือกคอร์ส --</option>
-                {courses.map((course) => (
-                  <option key={course.id} value={course.id}>
-                    {course.title} ({course.minCefrLevel}+)
-                  </option>
-                ))}
-              </select>
+                {saving ? (
+                  <>
+                    <Spinner className="h-4 w-4 border-white/30 border-t-white" />
+                    กำลังบันทึก...
+                  </>
+                ) : (
+                  'บันทึกการเปลี่ยนแปลง'
+                )}
+              </button>
+              <Link href="/admin/videos" className="btn btn-secondary">
+                ยกเลิก
+              </Link>
             </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-4 mt-8">
-            <button
-              onClick={handleSave}
-              disabled={saving || !selectedLevel}
-              className="flex-1 bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {saving ? 'กำลังบันทึก...' : 'บันทึก'}
-            </button>
-            <Link
-              href="/admin/videos"
-              className="flex-1 bg-gray-300 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-400 text-center"
-            >
-              ยกเลิก
-            </Link>
-          </div>
+          </section>
         </div>
-      </div>
-    </div>
+      )}
+    </AdminShell>
   )
 }
