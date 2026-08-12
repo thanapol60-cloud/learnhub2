@@ -14,6 +14,7 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
     role: 'user',
+    adminCode: '',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -39,6 +40,11 @@ export default function RegisterPage() {
       return
     }
 
+    if (formData.role === 'admin' && !formData.adminCode.trim()) {
+      setError('กรุณากรอกรหัสผู้ดูแลระบบ')
+      return
+    }
+
     setLoading(true)
     try {
       const response = await fetch('/api/auth/register', {
@@ -49,6 +55,7 @@ export default function RegisterPage() {
           email: formData.email,
           password: formData.password,
           role: formData.role,
+          adminCode: formData.adminCode,
         }),
       })
 
@@ -171,6 +178,27 @@ export default function RegisterPage() {
             <option value="admin">ผู้ดูแลระบบ — จัดการเนื้อหาและดูสถิติ</option>
           </select>
         </div>
+
+        {formData.role === 'admin' && (
+          <div>
+            <label htmlFor="adminCode" className="label">
+              รหัสผู้ดูแลระบบ
+            </label>
+            <input
+              id="adminCode"
+              type="password"
+              name="adminCode"
+              value={formData.adminCode}
+              onChange={handleChange}
+              required
+              className="input"
+              placeholder="กรอกรหัสที่ได้รับจากผู้ดูแลระบบ"
+            />
+            <p className="mt-1.5 text-xs text-slate-500">
+              บัญชีผู้ดูแลระบบต้องยืนยันด้วยรหัสนี้เท่านั้น
+            </p>
+          </div>
+        )}
 
         <button type="submit" disabled={loading} className="btn btn-primary w-full">
           {loading ? (

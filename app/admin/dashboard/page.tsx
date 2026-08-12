@@ -12,8 +12,15 @@ import {
   IconUsers,
   IconVideo,
 } from '@/components/icons'
+import { formatTHB } from '@/lib/enrollment-status'
 
 const SECTIONS = [
+  {
+    href: '/admin/students',
+    icon: IconUsers,
+    title: 'นักเรียน',
+    body: 'ดูรายชื่อผู้เรียนทุกคน คอร์สที่ลงทะเบียน และอนุมัติการชำระเงินที่รอตรวจสอบ',
+  },
   {
     href: '/admin/videos',
     icon: IconVideo,
@@ -38,6 +45,8 @@ export default function AdminDashboard() {
   const [videoCount, setVideoCount] = useState<number | null>(null)
   const [courseCount, setCourseCount] = useState<number | null>(null)
   const [learnerCount, setLearnerCount] = useState<number | null>(null)
+  const [pendingReview, setPendingReview] = useState<number | null>(null)
+  const [revenue, setRevenue] = useState<number | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -50,15 +59,18 @@ export default function AdminDashboard() {
         }
       }
 
-      const [videos, courses, analytics] = await Promise.all([
+      const [videos, courses, analytics, students] = await Promise.all([
         safeJson('/api/admin/videos'),
         safeJson('/api/admin/courses'),
         safeJson('/api/admin/analytics'),
+        safeJson('/api/admin/students'),
       ])
 
       setVideoCount(videos?.videos?.length ?? 0)
       setCourseCount(courses?.courses?.length ?? 0)
       setLearnerCount(analytics?.totalUsers ?? 0)
+      setPendingReview(students?.summary?.pendingReview ?? 0)
+      setRevenue(students?.summary?.revenue ?? 0)
     }
 
     load()
@@ -71,21 +83,25 @@ export default function AdminDashboard() {
       title="ภาพรวมระบบ"
       description="จัดการเนื้อหาการเรียนและติดตามผลการใช้งานของผู้เรียนทั้งหมดในที่เดียว"
     >
-      <section className="grid gap-5 sm:grid-cols-3">
-        <StatCard
-          label="วิดีโอในระบบ"
-          value={show(videoCount)}
-          icon={<IconVideo className="h-5 w-5" />}
-        />
-        <StatCard
-          label="คอร์สที่เปิดสอน"
-          value={show(courseCount)}
-          icon={<IconBook className="h-5 w-5" />}
-        />
+      <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="ผู้เรียนทั้งหมด"
           value={show(learnerCount)}
           icon={<IconUsers className="h-5 w-5" />}
+        />
+        <StatCard
+          label="รอตรวจสอบการชำระ"
+          value={show(pendingReview)}
+          hint={pendingReview ? 'ต้องดำเนินการที่แท็บนักเรียน' : undefined}
+        />
+        <StatCard
+          label="ยอดที่อนุมัติแล้ว"
+          value={revenue === null ? '—' : formatTHB(revenue)}
+        />
+        <StatCard
+          label="วิดีโอ / คอร์ส"
+          value={`${show(videoCount)} / ${show(courseCount)}`}
+          icon={<IconVideo className="h-5 w-5" />}
         />
       </section>
 
@@ -93,7 +109,7 @@ export default function AdminDashboard() {
         <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
           การจัดการ
         </h2>
-        <div className="mt-4 grid gap-5 md:grid-cols-3">
+        <div className="mt-4 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           {SECTIONS.map(({ href, icon: Icon, title, body }) => (
             <Link key={href} href={href} className="card card-hover group p-6">
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-800">

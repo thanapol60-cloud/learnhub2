@@ -7,6 +7,7 @@ import { SiteHeader } from '@/components/site-header'
 import { SiteFooter } from '@/components/site-footer'
 import { CefrBadge, EmptyState, LoadingScreen } from '@/components/ui'
 import { IconArrowRight, IconCheck, IconClock, IconUser } from '@/components/icons'
+import { formatTHB } from '@/lib/enrollment-status'
 
 interface CourseVideo {
   id: string
@@ -21,6 +22,7 @@ interface Course {
   minCefrLevel: CEFRLevel
   instructorName?: string
   duration: number
+  price: number
   learningOutcomes?: string[]
   videos?: CourseVideo[]
 }
@@ -265,8 +267,16 @@ export default function ResultPage() {
                   </div>
                 )}
 
-                <div className="mt-6 flex justify-end border-t border-slate-200 pt-5">
-                  <button className="btn btn-primary btn-sm">ลงทะเบียนเรียน</button>
+                <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-200 pt-5">
+                  <span className="text-sm font-semibold tabular-nums text-slate-900">
+                    {course.price > 0 ? formatTHB(course.price) : 'เรียนฟรี'}
+                  </span>
+                  <Link
+                    href={`/enroll/${course.id}`}
+                    className="btn btn-primary btn-sm"
+                  >
+                    ลงทะเบียนเรียน
+                  </Link>
                 </div>
               </article>
             ))}

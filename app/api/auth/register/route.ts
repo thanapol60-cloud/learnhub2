@@ -1,15 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { hashPassword } from '@/lib/auth'
+import { isValidAdminCode } from '@/lib/admin-code'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, name, role } = await request.json()
+    const { email, password, name, role, adminCode } = await request.json()
 
     if (!email || !password || !name) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
+      )
+    }
+
+    // บัญชีผู้ดูแลระบบต้องยืนยันด้วยรหัสที่ตั้งไว้เท่านั้น
+    const wantsAdmin = role === 'admin'
+    if (wantsAdmin && !isValidAdminCode(adminCode)) {
+      return NextResponse.json(
+        { error: 'รหัสผู้ดูแลระบบไม่ถูกต้อง' },
+        { status: 403 }
       )
     }
 
@@ -19,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'Email already exists' },
+        { error: 'อีเมลนี้ถูกใช้งานแล้ว' },
         { status: 409 }
       )
     }
@@ -31,7 +41,7 @@ export async function POST(request: NextRequest) {
         email,
         password: hashedPassword,
         name,
-        role: role === 'admin' ? 'admin' : 'user',
+        role: wantsAdmin ? 'admin' : 'user',
       },
       select: {
         id: true,
@@ -49,6 +59,12 @@ export async function POST(request: NextRequest) {
     response.cookies.set('userId', user.id, {
       httpOnly: true,
       maxAge: 60 * 60 * 24 * 7, // 7 days
+    })
+
+    // ต้องมี userRole ด้วย ไม่งั้นผู้ดูแลที่เพิ่งสมัครจะเรียก API ฝั่งแอดมินไม่ได้
+    response.cookies.set('userRole', user.role, {
+      httpOnly: true,
+      maxAge: 60 * 60 * 24 * 7,
     })
 
     return response

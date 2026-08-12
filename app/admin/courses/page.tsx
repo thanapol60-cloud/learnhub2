@@ -6,6 +6,7 @@ import { AdminShell } from '@/components/admin-shell'
 import { CefrBadge, EmptyState, Spinner } from '@/components/ui'
 import { IconClock, IconPlus, IconVideo } from '@/components/icons'
 import { CEFR_LEVELS } from '@/lib/cefr'
+import { formatTHB } from '@/lib/enrollment-status'
 
 interface CourseVideo {
   id: string
@@ -20,6 +21,7 @@ interface Course {
   minCefrLevel: string
   maxCefrLevel?: string
   duration: number
+  price: number
   videos: CourseVideo[]
 }
 
@@ -46,8 +48,11 @@ export default function AdminCoursesPage() {
     maxCefrLevel: '',
     instructorName: '',
     duration: '',
+    price: '',
   })
   const [creating, setCreating] = useState(false)
+  const [priceDraft, setPriceDraft] = useState<Record<string, string>>({})
+  const [savingPriceId, setSavingPriceId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchCourses()
@@ -111,6 +116,7 @@ export default function AdminCoursesPage() {
         body: JSON.stringify({
           ...formData,
           duration: parseInt(formData.duration) || 0,
+          price: parseInt(formData.price) || 0,
           learningOutcomes: [],
           videoIds: selectedVideoIds,
         }),
@@ -124,6 +130,7 @@ export default function AdminCoursesPage() {
           maxCefrLevel: '',
           instructorName: '',
           duration: '',
+          price: '',
         })
         setSelectedVideoIds([])
         setShowCreateForm(false)
@@ -134,6 +141,32 @@ export default function AdminCoursesPage() {
       console.error('Create failed:', error)
     } finally {
       setCreating(false)
+    }
+  }
+
+  const savePrice = async (courseId: string) => {
+    const raw = priceDraft[courseId]
+    if (raw === undefined) return
+
+    setSavingPriceId(courseId)
+    try {
+      const response = await fetch(`/api/admin/courses/${courseId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ price: Math.max(0, parseInt(raw) || 0) }),
+      })
+      if (response.ok) {
+        await fetchCourses()
+        setPriceDraft((prev) => {
+          const next = { ...prev }
+          delete next[courseId]
+          return next
+        })
+      }
+    } catch (error) {
+      console.error('Failed to update price:', error)
+    } finally {
+      setSavingPriceId(null)
     }
   }
 
@@ -285,6 +318,25 @@ export default function AdminCoursesPage() {
             </div>
 
             <div>
+              <label htmlFor="price" className="label">
+                ราคา (บาท)
+              </label>
+              <input
+                id="price"
+                type="number"
+                name="price"
+                min={0}
+                value={formData.price}
+                onChange={handleInputChange}
+                className="input sm:max-w-xs"
+                placeholder="0"
+              />
+              <p className="mt-1.5 text-xs text-slate-500">
+                ใส่ 0 หากเป็นคอร์สฟรี — ผู้เรียนจะเข้าเรียนได้ทันทีโดยไม่ต้องชำระเงิน
+              </p>
+            </div>
+
+            <div>
               <div className="mb-1.5 flex items-center justify-between">
                 <span className="label mb-0">วิดีโอที่รวมในคอร์ส</span>
                 {selectedVideoIds.length > 0 && (
@@ -394,20 +446,48 @@ export default function AdminCoursesPage() {
                   <IconVideo className="h-3.5 w-3.5" />
                   {course.videos.length} วิดีโอ
                 </span>
+                <span className="font-medium text-slate-700">
+                  {course.price > 0 ? formatTHB(course.price) : 'เรียนฟรี'}
+                </span>
               </div>
 
-              <div className="mt-5 flex justify-end gap-3 border-t border-slate-200 pt-5">
+              <div className="mt-5 flex flex-wrap items-end justify-between gap-4 border-t border-slate-200 pt-5">
+                <div>
+                  <label
+                    htmlFor={`price-${course.id}`}
+                    className="label text-xs"
+                  >
+                    ปรับราคา (บาท)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      id={`price-${course.id}`}
+                      type="number"
+                      min={0}
+                      value={priceDraft[course.id] ?? String(course.price)}
+                      onChange={(e) =>
+                        setPriceDraft((prev) => ({
+                          ...prev,
+                          [course.id]: e.target.value,
+                        }))
+                      }
+                      className="input w-32"
+                    />
+                    <button
+                      onClick={() => savePrice(course.id)}
+                      disabled={savingPriceId === course.id}
+                      className="btn btn-secondary btn-sm"
+                    >
+                      {savingPriceId === course.id ? 'กำลังบันทึก...' : 'บันทึกราคา'}
+                    </button>
+                  </div>
+                </div>
+
                 <button
                   onClick={() => handleDelete(course.id)}
                   className="btn btn-danger btn-sm"
                 >
-                  ลบ
-                </button>
-                <button
-                  onClick={() => router.push(`/admin/courses/${course.id}`)}
-                  className="btn btn-primary btn-sm"
-                >
-                  แก้ไข
+                  ลบคอร์ส
                 </button>
               </div>
             </article>

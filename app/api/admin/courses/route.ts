@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
       instructorName,
       learningOutcomes,
       duration,
+      price,
       videoIds,
     } = await request.json()
 
@@ -41,6 +42,7 @@ export async function POST(request: NextRequest) {
         instructorName,
         learningOutcomes,
         duration: duration || 0,
+        price: Math.max(0, Number(price) || 0),
         createdById: user.id,
         content: { chapters: [] },
         // A course is a set of clips grouped together

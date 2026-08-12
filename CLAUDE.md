@@ -48,10 +48,11 @@ learnhub2/
 
 ### 1. User Authentication & Authorization
 - Register with role selection (User or Admin)
+- Admin registration requires a verification code (`ADMIN_REGISTER_CODE`, default `LEARNHUB-ADMIN-2026`)
 - Login with email and password
 - Secure password hashing with PBKDF2
 - Role-based access control
-- Session management with HTTP-only cookies
+- Session management with HTTP-only cookies (`userId`, `userRole`)
 
 ### 2. Adaptive Assessment (User Feature)
 - Dynamic difficulty adjustment based on user performance
@@ -95,7 +96,20 @@ learnhub2/
 - Monitor course enrollments
 - Insights and recommendations for admins
 
-### 9. User Tracking
+### 9. Course Payment via PromptPay QR
+- Each course carries a price in THB (0 = free, enrolled instantly)
+- Enrolling creates a payment record with a reference code (`LH-XXXXXX`)
+- The learner is shown a PromptPay QR generated from `PROMPTPAY_ID` (default 0910391036) with the exact amount encoded
+- Learner reports the transfer; admin approves or rejects it in the console
+- Enrollment status flow: `awaiting_payment` → `pending_review` → `active` / `rejected`
+
+### 10. Student Roster (Admin)
+- Dedicated console tab listing every learner
+- Shows CEFR level, answer stats, and all enrolled courses per student
+- Payment status, amount, reference and learner note per enrollment
+- Approve/reject payments inline; search and filter by payment state
+
+### 11. User Tracking
 - Session-based user tracking using cookies
 - Assessment history recording
 - Progress statistics (correct/wrong answers, accuracy)
@@ -137,6 +151,18 @@ learnhub2/
 - `GET /api/dashboard` - Get user dashboard data
 - `GET /api/courses` - Get all courses
 - `POST /api/questions/seed` - Seed sample questions
+
+### Enrollment & Payment
+- `GET /api/enrollments` - Current user's enrollments
+- `POST /api/enrollments` - Enroll in a course (creates payment record)
+- `PATCH /api/enrollments/:id` - Learner reports the transfer
+- `DELETE /api/enrollments/:id` - Cancel an unpaid enrollment
+- `GET /api/payment/qr?enrollmentId=` - PromptPay QR (SVG), amount read from the DB
+
+### Admin
+- `GET /api/admin/students` - All learners with enrollments and payment status
+- `PATCH /api/admin/enrollments/:id` - Approve or reject a payment
+- `DELETE /api/admin/enrollments/:id` - Remove an enrollment
 
 ## Development Guidelines
 

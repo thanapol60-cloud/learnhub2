@@ -100,6 +100,7 @@ model Course {
 
   content               Json        // Structured course content
   duration              Int         @default(0) // hours
+  price                 Int         @default(0) // THB, 0 = free course
   learningOutcomes      Json?       // [string]
   videos                Video[]     @relation("Videos")
 
@@ -122,6 +123,15 @@ model CourseEnrollment {
   completedAt           DateTime?
   progress              Int         @default(0) // 0-100 percentage
 
+  // Payment via PromptPay QR — learner transfers, admin verifies
+  status                String      @default("awaiting_payment") // awaiting_payment, pending_review, active, rejected
+  amount                Int         @default(0) // THB charged at enrollment time
+  paymentRef            String?     // Reference shown to the learner, quoted in the transfer
+  paymentNote           String?     @db.Text // Learner's note (time of transfer, last digits, etc.)
+  paidAt                DateTime?   // When the learner reported the payment
+  reviewedAt            DateTime?   // When an admin approved or rejected it
+
   @@unique([userId, courseId])
   @@index([userId])
+  @@index([status])
 }

@@ -7,6 +7,7 @@ import { SiteHeader } from '@/components/site-header'
 import { SiteFooter } from '@/components/site-footer'
 import { EmptyState, LoadingScreen, PageHeader, StatCard } from '@/components/ui'
 import { IconArrowRight, IconChart, IconTarget } from '@/components/icons'
+import { formatTHB, statusLabel, statusStyle } from '@/lib/enrollment-status'
 
 interface DashboardData {
   currentLevel: CEFRLevel
@@ -19,17 +20,40 @@ interface DashboardData {
   }
 }
 
+interface Enrollment {
+  id: string
+  status: string
+  amount: number
+  paymentRef?: string | null
+  enrolledAt: string
+  course: {
+    id: string
+    title: string
+    minCefrLevel: string
+    duration: number
+    instructorName?: string | null
+  }
+}
+
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const response = await fetch('/api/dashboard')
-        if (response.ok) {
-          const result = await response.json()
-          setData(result)
+        const [dashboardRes, enrollmentRes] = await Promise.all([
+          fetch('/api/dashboard'),
+          fetch('/api/enrollments'),
+        ])
+
+        if (dashboardRes.ok) {
+          setData(await dashboardRes.json())
+        }
+        if (enrollmentRes.ok) {
+          const result = await enrollmentRes.json()
+          setEnrollments(result.enrollments ?? [])
         }
       } catch (error) {
         console.error('Failed to fetch dashboard:', error)
@@ -161,6 +185,66 @@ export default function DashboardPage() {
                 </dl>
               </section>
             )}
+
+            {/* Enrolled courses */}
+            <section className="card overflow-hidden">
+              <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+                <h2 className="text-sm font-semibold text-slate-900">คอร์สของฉัน</h2>
+                <Link
+                  href="/courses"
+                  className="text-sm font-medium text-brand-800 hover:underline"
+                >
+                  หาคอร์สเพิ่ม
+                </Link>
+              </div>
+
+              {enrollments.length > 0 ? (
+                <ul className="divide-y divide-slate-100">
+                  {enrollments.map((item) => (
+                    <li
+                      key={item.id}
+                      className="flex flex-wrap items-center justify-between gap-4 px-6 py-4"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium text-slate-900">
+                          {item.course.title}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          ระดับ {item.course.minCefrLevel}+ · {item.course.duration}{' '}
+                          ชั่วโมง
+                          {item.amount > 0 && ` · ${formatTHB(item.amount)}`}
+                          {item.paymentRef && ` · อ้างอิง ${item.paymentRef}`}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${statusStyle(
+                            item.status
+                          )}`}
+                        >
+                          {statusLabel(item.status)}
+                        </span>
+                        {item.status !== 'active' && (
+                          <Link
+                            href={`/enroll/${item.course.id}`}
+                            className="btn btn-secondary btn-sm"
+                          >
+                            ชำระเงิน
+                          </Link>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="px-6 py-10 text-center text-sm text-slate-500">
+                  ยังไม่ได้ลงทะเบียนคอร์สใด —{' '}
+                  <Link href="/courses" className="font-medium text-brand-800 hover:underline">
+                    ดูคอร์สที่เปิดสอน
+                  </Link>
+                </p>
+              )}
+            </section>
 
             {/* Next steps */}
             <section className="grid gap-5 sm:grid-cols-2">

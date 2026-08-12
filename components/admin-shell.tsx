@@ -8,6 +8,7 @@ import { LoadingScreen } from './ui'
 
 const ADMIN_NAV = [
   { href: '/admin/dashboard', label: 'ภาพรวม' },
+  { href: '/admin/students', label: 'นักเรียน' },
   { href: '/admin/videos', label: 'วิดีโอ' },
   { href: '/admin/courses', label: 'คอร์ส' },
   { href: '/admin/analytics', label: 'สถิติ' },

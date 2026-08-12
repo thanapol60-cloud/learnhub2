@@ -7,6 +7,7 @@ import { SiteFooter } from '@/components/site-footer'
 import { CefrBadge, EmptyState, PageHeader, Spinner } from '@/components/ui'
 import { IconCheck, IconClock, IconUser } from '@/components/icons'
 import { CEFR_LEVELS } from '@/lib/cefr'
+import { formatTHB } from '@/lib/enrollment-status'
 
 interface Course {
   id: string
@@ -15,6 +16,7 @@ interface Course {
   minCefrLevel: string
   instructorName?: string
   duration: number
+  price: number
   learningOutcomes?: string[]
 }
 
@@ -152,10 +154,16 @@ export default function CoursesPage() {
                   </span>
                 </div>
 
-                <div className="mt-4 flex justify-end">
-                  <button className="btn btn-secondary btn-sm">
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <span className="text-sm font-semibold tabular-nums text-slate-900">
+                    {course.price > 0 ? formatTHB(course.price) : 'เรียนฟรี'}
+                  </span>
+                  <Link
+                    href={`/enroll/${course.id}`}
+                    className="btn btn-primary btn-sm"
+                  >
                     ลงทะเบียนเรียน
-                  </button>
+                  </Link>
                 </div>
               </article>
             ))}
