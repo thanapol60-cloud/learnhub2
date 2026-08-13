@@ -49,7 +49,10 @@ export async function GET(
   }
 }
 
-/** ผู้เรียนแจ้งว่าโอนเงินแล้ว — เข้าคิวรอผู้ดูแลตรวจสอบ */
+/**
+ * ผู้เรียนแจ้งว่าโอนเงินแล้ว — เข้าคิวรอผู้ดูแลตรวจสอบ
+ * และเมื่อสิทธิ์เปิดแล้ว ใช้บันทึกความคืบหน้าการเรียน (progress 0–100)
+ */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -60,7 +63,7 @@ export async function PATCH(
   }
 
   try {
-    const { paymentNote } = await request.json()
+    const { paymentNote, progress } = await request.json()
 
     const enrollment = await prisma.courseEnrollment.findUnique({
       where: { id: params.id },
@@ -68,6 +71,18 @@ export async function PATCH(
 
     if (!enrollment || enrollment.userId !== user.id) {
       return NextResponse.json({ error: 'ไม่พบรายการลงทะเบียน' }, { status: 404 })
+    }
+
+    if (typeof progress === 'number') {
+      const clamped = Math.max(0, Math.min(100, Math.round(progress)))
+      const updated = await prisma.courseEnrollment.update({
+        where: { id: params.id },
+        data: {
+          progress: clamped,
+          completedAt: clamped >= 100 ? enrollment.completedAt ?? new Date() : null,
+        },
+      })
+      return NextResponse.json({ enrollment: updated })
     }
 
     if (enrollment.status === 'active') {

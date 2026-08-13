@@ -24,6 +24,7 @@ interface Enrollment {
   id: string
   status: string
   amount: number
+  progress: number
   paymentRef?: string | null
   enrolledAt: string
   course: {
@@ -207,13 +208,19 @@ export default function DashboardPage() {
                     >
                       <div className="min-w-0">
                         <p className="font-medium text-slate-900">
-                          {item.course.title}
+                          <Link
+                            href={`/courses/${item.course.id}`}
+                            className="transition-colors hover:text-brand-800"
+                          >
+                            {item.course.title}
+                          </Link>
                         </p>
                         <p className="mt-1 text-xs text-slate-500">
                           ระดับ {item.course.minCefrLevel}+ · {item.course.duration}{' '}
                           ชั่วโมง
                           {item.amount > 0 && ` · ${formatTHB(item.amount)}`}
                           {item.paymentRef && ` · อ้างอิง ${item.paymentRef}`}
+                          {item.status === 'active' && ` · เรียนไปแล้ว ${item.progress}%`}
                         </p>
                       </div>
                       <div className="flex items-center gap-3">
@@ -224,7 +231,14 @@ export default function DashboardPage() {
                         >
                           {statusLabel(item.status)}
                         </span>
-                        {item.status !== 'active' && (
+                        {item.status === 'active' ? (
+                          <Link
+                            href={`/courses/${item.course.id}`}
+                            className="btn btn-primary btn-sm"
+                          >
+                            เข้าเรียน
+                          </Link>
+                        ) : (
                           <Link
                             href={`/enroll/${item.course.id}`}
                             className="btn btn-secondary btn-sm"

@@ -113,7 +113,12 @@ export default function CoursesPage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <h2 className="text-base font-semibold leading-snug text-slate-900">
-                    {course.title}
+                    <Link
+                      href={`/courses/${course.id}`}
+                      className="transition-colors hover:text-brand-800"
+                    >
+                      {course.title}
+                    </Link>
                   </h2>
                   <CefrBadge level={course.minCefrLevel} suffix="+" />
                 </div>
@@ -158,12 +163,20 @@ export default function CoursesPage() {
                   <span className="text-sm font-semibold tabular-nums text-slate-900">
                     {course.price > 0 ? formatTHB(course.price) : 'เรียนฟรี'}
                   </span>
-                  <Link
-                    href={`/enroll/${course.id}`}
-                    className="btn btn-primary btn-sm"
-                  >
-                    ลงทะเบียนเรียน
-                  </Link>
+                  <div className="flex gap-2">
+                    <Link
+                      href={`/courses/${course.id}`}
+                      className="btn btn-secondary btn-sm"
+                    >
+                      รายละเอียด
+                    </Link>
+                    <Link
+                      href={`/enroll/${course.id}`}
+                      className="btn btn-primary btn-sm"
+                    >
+                      ลงทะเบียน
+                    </Link>
+                  </div>
                 </div>
               </article>
             ))}
