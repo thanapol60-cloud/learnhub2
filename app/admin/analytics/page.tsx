@@ -5,6 +5,7 @@ import { AdminShell } from '@/components/admin-shell'
 import { EmptyState, Spinner, StatCard } from '@/components/ui'
 import { IconBook, IconChart, IconLayers, IconUsers } from '@/components/icons'
 import { CEFR_LEVELS } from '@/lib/cefr'
+import { CefrDonut } from '@/components/cefr-donut'
 
 interface LearnerStats {
   totalUsers: number
@@ -77,7 +78,21 @@ export default function AdminAnalyticsPage() {
           <section className="card overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
               <h2 className="text-sm font-semibold text-slate-900">
-                การกระจายตัวของระดับ CEFR
+                สัดส่วนผู้เรียนตามระดับ CEFR
+              </h2>
+              <span className="text-xs text-slate-500">
+                ชี้หรือคลิกที่ชิ้นส่วนเพื่อดูรายละเอียด
+              </span>
+            </div>
+            <div className="p-6">
+              <CefrDonut distribution={stats.levelDistribution} />
+            </div>
+          </section>
+
+          <section className="card overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+              <h2 className="text-sm font-semibold text-slate-900">
+                เปรียบเทียบรายระดับ
               </h2>
               <span className="text-xs text-slate-500">
                 ฐานข้อมูล {total} ผู้เรียน
