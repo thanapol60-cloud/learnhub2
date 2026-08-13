@@ -234,9 +234,11 @@ export default function CourseDetailPage() {
             <div className="card overflow-hidden">
               <video
                 key={lesson.id}
-                src={lesson.videoUrl}
+                // #t=0.1 ทำให้เบราว์เซอร์แสดงเฟรมจริงแทนจอดำก่อนกดเล่น
+                src={`${lesson.videoUrl}#t=0.1`}
                 controls
                 playsInline
+                preload="metadata"
                 onEnded={() => markDone(lesson.id)}
                 className="aspect-video w-full bg-black"
               />

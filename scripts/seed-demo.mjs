@@ -22,14 +22,17 @@ const PRICE_BY_LEVEL = {
 /**
  * คลิปตัวอย่างที่เปิดให้ใช้ได้เสรี (CC0 / CC-BY) และเสิร์ฟตรงเป็น video/mp4
  * ใช้แทนวิดีโอบทเรียนจริงเพื่อให้กดเล่นได้ครบทุกบทตอนสาธิต
+ *
+ * ทุกไฟล์ต้อง "เล็ก" (ไม่เกินไม่กี่ MB) — ก่อนหน้านี้เคยใส่ไฟล์ 238 MB ยาว 10 นาที
+ * ผลคือเครื่องเล่นขึ้นจอดำค้างเพราะโหลดไม่จบ ทั้งที่ลิงก์ตอบ 200 ปกติ
  */
 const DEMO_CLIPS = [
-  'https://media.w3.org/2010/05/bunny/movie.mp4',
-  'https://media.w3.org/2010/05/sintel/trailer.mp4',
-  'https://media.w3.org/2010/05/bunny/trailer.mp4',
-  'https://mdn.github.io/shared-assets/videos/flower.mp4',
-  'https://media.w3.org/2010/05/video/movie_300.mp4',
-  'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4',
+  'https://mdn.github.io/shared-assets/videos/flower.mp4',                              // 1.1 MB
+  'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4', // 0.9 MB
+  'https://media.w3.org/2010/05/video/movie_300.mp4',                                   // 2.6 MB
+  'https://test-videos.co.uk/vids/jellyfish/mp4/h264/360/Jellyfish_360_10s_1MB.mp4',    // 1.0 MB
+  'https://media.w3.org/2010/05/sintel/trailer.mp4',                                    // 4.2 MB
+  'https://test-videos.co.uk/vids/sintel/mp4/h264/360/Sintel_360_10s_1MB.mp4',          // 1.0 MB
 ]
 
 async function main() {
