@@ -8,6 +8,7 @@ import { SiteFooter } from '@/components/site-footer'
 import { CefrBadge, EmptyState, LoadingScreen } from '@/components/ui'
 import { IconArrowRight, IconCheck, IconClock, IconUser } from '@/components/icons'
 import { formatTHB } from '@/lib/enrollment-status'
+import { topicLabel } from '@/lib/topics'
 
 interface CourseVideo {
   id: string
@@ -35,17 +36,43 @@ interface ResultData {
   recommendations: Course[]
 }
 
+interface WeakTopic {
+  topic: string
+  attempted: number
+  wrong: number
+  accuracy: number
+}
+
+interface FocusedCourse {
+  id: string
+  title: string
+  description: string
+  minCefrLevel: string
+  duration: number
+  price: number
+  isFocused: boolean
+  videoCount: number
+  matchedTopics: string[]
+}
+
 export default function ResultPage() {
   const [result, setResult] = useState<ResultData | null>(null)
+  const [weakTopics, setWeakTopics] = useState<WeakTopic[]>([])
+  const [targeted, setTargeted] = useState<FocusedCourse[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchResult = async () => {
       try {
-        const response = await fetch('/api/assessment/result')
-        if (response.ok) {
-          const data = await response.json()
-          setResult(data)
+        const [resultRes, recRes] = await Promise.all([
+          fetch('/api/assessment/result'),
+          fetch('/api/recommendations'),
+        ])
+        if (resultRes.ok) setResult(await resultRes.json())
+        if (recRes.ok) {
+          const data = await recRes.json()
+          setWeakTopics(data.weakTopics ?? [])
+          setTargeted(data.courses ?? [])
         }
       } catch (error) {
         console.error('Failed to fetch result:', error)
@@ -172,6 +199,83 @@ export default function ResultPage() {
           </div>
         </div>
       </section>
+
+      {/* จุดที่ตอบผิด + คอร์สที่ตรงจุดนั้น */}
+      {weakTopics.length > 0 && (
+        <section className="container-page pt-14">
+          <p className="eyebrow">วิเคราะห์รายหัวข้อ</p>
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight">
+            จุดที่ควรซ่อมก่อน
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm text-slate-600">
+            มาจากข้อที่คุณตอบผิดจริงในการประเมินครั้งนี้ ไม่ใช่การเดาจากระดับรวม
+          </p>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {weakTopics.slice(0, 6).map((item) => (
+              <div key={item.topic} className="card p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-sm font-semibold text-slate-900">
+                    {topicLabel(item.topic)}
+                  </p>
+                  <span className="shrink-0 rounded-md bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-200">
+                    ผิด {item.wrong}/{item.attempted}
+                  </span>
+                </div>
+                <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-full rounded-full bg-red-400"
+                    style={{ width: `${100 - item.accuracy}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {targeted.length > 0 && (
+            <div className="mt-8">
+              <h3 className="text-sm font-semibold text-slate-900">
+                คอร์สที่ตรงกับจุดเหล่านี้
+              </h3>
+              <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {targeted.map((course) => (
+                  <article key={course.id} className="card card-hover flex flex-col p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <h4 className="text-sm font-semibold leading-snug text-slate-900">
+                        <Link href={`/courses/${course.id}`} className="hover:text-brand-800">
+                          {course.title}
+                        </Link>
+                      </h4>
+                      <CefrBadge level={course.minCefrLevel} />
+                    </div>
+                    <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-slate-600">
+                      {course.description}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {course.matchedTopics.map((topic) => (
+                        <span
+                          key={topic}
+                          className="rounded-md bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-800"
+                        >
+                          {topicLabel(topic)}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-3">
+                      <span className="text-xs text-slate-500">
+                        {course.videoCount} บท · {course.duration} ชม.
+                      </span>
+                      <span className="text-sm font-semibold tabular-nums text-slate-900">
+                        {course.price > 0 ? formatTHB(course.price) : 'ฟรี'}
+                      </span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Recommendations */}
       <section className="container-page py-14">

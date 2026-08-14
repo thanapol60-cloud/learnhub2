@@ -56,6 +56,7 @@ export async function GET(request: NextRequest) {
         explanation: true,
         cefrLevel: true,
         category: true,
+        topic: true,
       },
     })
 

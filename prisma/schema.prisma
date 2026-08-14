@@ -41,12 +41,15 @@ model Question {
   difficulty            Int         @default(1) // 1-10, affects CEFR level assignment
   cefrLevel             String      // A1, A2, B1, B2, C1, C2
   category              String      @default("general") // grammar, vocabulary, reading, listening
+  // หัวข้อที่ข้อนี้วัด (เช่น past-simple, conditionals) — ใช้จับคู่ข้อที่ตอบผิดกับคอร์สที่สอนเรื่องนั้น
+  topic                 String?
   createdAt             DateTime    @default(now())
 
   assessmentRecords     AssessmentRecord[]
 
   @@index([cefrLevel])
   @@index([category])
+  @@index([topic])
 }
 
 model AssessmentRecord {
@@ -103,6 +106,10 @@ model Course {
   content               Json        // Structured course content
   duration              Int         @default(0) // hours
   price                 Int         @default(0) // THB, 0 = free course
+  // หัวข้อที่คอร์สนี้สอน — ตรงกับ Question.topic เพื่อแนะนำคอร์สจากจุดที่ผู้เรียนตอบผิด
+  topics                Json?       // [string]
+  // คอร์สเจาะหัวข้อเดียว (สั้น ราคาถูก) ต่างจากคอร์สหลักประจำระดับ
+  isFocused             Boolean     @default(false)
   learningOutcomes      Json?       // [string]
   videos                Video[]     @relation("Videos")
 

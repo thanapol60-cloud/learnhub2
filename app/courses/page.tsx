@@ -8,6 +8,7 @@ import { CefrBadge, EmptyState, PageHeader, Spinner } from '@/components/ui'
 import { IconCheck, IconClock, IconUser } from '@/components/icons'
 import { CEFR_LEVELS } from '@/lib/cefr'
 import { formatTHB } from '@/lib/enrollment-status'
+import { topicLabel } from '@/lib/topics'
 
 interface Course {
   id: string
@@ -18,12 +19,15 @@ interface Course {
   duration: number
   price: number
   learningOutcomes?: string[]
+  topics?: string[] | null
+  isFocused?: boolean
 }
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
   const [filterLevel, setFilterLevel] = useState<string | null>(null)
+  const [filterKind, setFilterKind] = useState<'all' | 'focused' | 'level'>('all')
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -43,9 +47,12 @@ export default function CoursesPage() {
     fetchCourses()
   }, [])
 
-  const filteredCourses = filterLevel
-    ? courses.filter((course) => course.minCefrLevel === filterLevel)
-    : courses
+  const filteredCourses = courses.filter((course) => {
+    if (filterLevel && course.minCefrLevel !== filterLevel) return false
+    if (filterKind === 'focused' && !course.isFocused) return false
+    if (filterKind === 'level' && course.isFocused) return false
+    return true
+  })
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -65,6 +72,29 @@ export default function CoursesPage() {
 
         {/* Filters */}
         <div className="mt-8 flex flex-wrap items-center gap-2">
+          <span className="mr-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            ประเภท
+          </span>
+          {[
+            { key: 'all' as const, label: 'ทั้งหมด' },
+            { key: 'focused' as const, label: 'เจาะหัวข้อ' },
+            { key: 'level' as const, label: 'ประจำระดับ' },
+          ].map((item) => (
+            <button
+              key={item.key}
+              onClick={() => setFilterKind(item.key)}
+              className={`rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                filterKind === item.key
+                  ? 'border-brand-800 bg-brand-800 text-white'
+                  : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="mr-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
             กรองตามระดับ
           </span>
@@ -126,6 +156,20 @@ export default function CoursesPage() {
                 <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-slate-600">
                   {course.description}
                 </p>
+
+                {/* หัวข้อที่คอร์สนี้สอน — ตัวเดียวกับที่ใช้จับคู่กับข้อที่ผู้เรียนตอบผิด */}
+                {Array.isArray(course.topics) && course.topics.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {course.topics.map((topic) => (
+                      <span
+                        key={topic}
+                        className="rounded-md bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-800"
+                      >
+                        {topicLabel(topic)}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 {course.learningOutcomes && course.learningOutcomes.length > 0 && (
                   <ul className="mt-5 space-y-2">
