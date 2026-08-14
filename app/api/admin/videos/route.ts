@@ -4,7 +4,7 @@ import { getUser, requireAdmin } from '@/lib/auth-middleware'
 import { analyzeVideoLevel } from '@/lib/ai-analysis'
 
 export async function POST(request: NextRequest) {
-  const authError = requireAdmin(request)
+  const authError = await requireAdmin(request)
   if (authError) return authError
 
   try {
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const authError = requireAdmin(request)
+  const authError = await requireAdmin(request)
   if (authError) return authError
 
   try {

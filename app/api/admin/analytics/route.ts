@@ -35,7 +35,7 @@ function summarise(subject: SubjectKey, learnerLevels: string[]) {
 }
 
 export async function GET(request: NextRequest) {
-  const authError = requireAdmin(request)
+  const authError = await requireAdmin(request)
   if (authError) return authError
 
   try {

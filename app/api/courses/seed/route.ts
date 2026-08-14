@@ -4,7 +4,7 @@ import { getUser, requireAdmin } from '@/lib/auth-middleware'
 import { SEED_COURSES } from '@/lib/seed-data'
 
 export async function POST(request: NextRequest) {
-  const authError = requireAdmin(request)
+  const authError = await requireAdmin(request)
   if (authError) return authError
 
   try {

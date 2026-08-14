@@ -171,3 +171,13 @@ model CourseEnrollment {
   @@index([userId])
   @@index([status])
 }
+
+// ค่าตั้งของระบบที่ผู้ดูแลแก้ได้จากหน้าเว็บ
+// ใช้เก็บความลับอย่าง API key ด้วย ค่าจึงถูกเข้ารหัสก่อนบันทึกเสมอ (ดู lib/settings.ts)
+model Setting {
+  key         String   @id
+  value       String   @db.Text
+  encrypted   Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+}

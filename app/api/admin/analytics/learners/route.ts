@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
  * เงื่อนไข "ตอบไปแล้วอย่างน้อยหนึ่งข้อ" ต้องตรงกับที่หน้าสถิตินับ ไม่งั้นจำนวนจะไม่ตรงกัน
  */
 export async function GET(request: NextRequest) {
-  const authError = requireAdmin(request)
+  const authError = await requireAdmin(request)
   if (authError) return authError
 
   const subject = request.nextUrl.searchParams.get('subject') ?? 'english'

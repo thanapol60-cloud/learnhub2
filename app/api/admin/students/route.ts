@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 /** รายชื่อนักเรียนทั้งหมด พร้อมคอร์สที่ลงทะเบียนและสถานะการชำระเงิน */
 export async function GET(request: NextRequest) {
-  const authError = requireAdmin(request)
+  const authError = await requireAdmin(request)
   if (authError) return authError
 
   try {
