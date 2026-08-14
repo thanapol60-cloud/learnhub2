@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { CEFR_LEVELS } from '@/lib/cefr'
 
 /**
@@ -42,13 +42,32 @@ function arcPath(startAngle: number, endAngle: number, outer: number, inner: num
 export function CefrDonut({
   distribution,
   levels = CEFR_LEVELS as unknown as string[],
+  onPin,
 }: {
   distribution: Record<string, number>
   /** ระดับของวิชาที่กำลังแสดง เรียงจากต่ำไปสูง */
   levels?: string[]
+  /** แจ้งระดับที่ถูกปักหมุด (null = ยกเลิก) ให้หน้าที่เรียกไปดึงรายชื่อผู้เรียนต่อ */
+  onPin?: (level: string | null) => void
 }) {
   const [active, setActive] = useState<string | null>(null)
   const [pinned, setPinned] = useState<string | null>(null)
+
+  // เปลี่ยนวิชาแล้วต้องปลดหมุด ไม่งั้นระดับของวิชาก่อนหน้าจะค้างอยู่กับชุดข้อมูลใหม่
+  const levelKey = levels.join('|')
+  useEffect(() => {
+    setPinned(null)
+    setActive(null)
+    onPin?.(null)
+    // onPin ตั้งใจไม่ใส่ใน deps เพื่อไม่ให้ callback ที่สร้างใหม่ทุกเรนเดอร์ล้างหมุดทิ้ง
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [levelKey])
+
+  const togglePin = (level: string) => {
+    const next = pinned === level ? null : level
+    setPinned(next)
+    onPin?.(next)
+  }
 
   const slices = levels.map((level, index) => ({
     level,
@@ -117,7 +136,7 @@ export function CefrDonut({
                   opacity={dimmed ? 0.35 : 1}
                   onMouseEnter={() => setActive(arc.level)}
                   onMouseLeave={() => setActive(null)}
-                  onClick={() => setPinned(pinned === arc.level ? null : arc.level)}
+                  onClick={() => togglePin(arc.level)}
                   className="cursor-pointer transition-opacity duration-150"
                 />
               )
@@ -136,7 +155,7 @@ export function CefrDonut({
                 opacity={dimmed ? 0.35 : 1}
                 onMouseEnter={() => setActive(arc.level)}
                 onMouseLeave={() => setActive(null)}
-                onClick={() => setPinned(pinned === arc.level ? null : arc.level)}
+                onClick={() => togglePin(arc.level)}
                 className="cursor-pointer transition-all duration-150"
               />
             )
@@ -181,9 +200,7 @@ export function CefrDonut({
                 onMouseLeave={() => setActive(null)}
                 onFocus={() => setActive(slice.level)}
                 onBlur={() => setActive(null)}
-                onClick={() =>
-                  setPinned(pinned === slice.level ? null : slice.level)
-                }
+                onClick={() => togglePin(slice.level)}
                 aria-pressed={pinned === slice.level}
                 disabled={slice.count === 0}
                 className={`flex w-full items-center gap-3 rounded-md px-2.5 py-1.5 text-left transition-colors ${
