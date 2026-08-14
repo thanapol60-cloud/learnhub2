@@ -45,6 +45,7 @@ interface WeakTopic {
 }
 
 interface FocusedCourse {
+  aiReason?: string | null
   id: string
   title: string
   description: string
@@ -65,6 +66,7 @@ function ResultReport() {
   const [result, setResult] = useState<ResultData | null>(null)
   const [weakTopics, setWeakTopics] = useState<WeakTopic[]>([])
   const [targeted, setTargeted] = useState<FocusedCourse[]>([])
+  const [aiSummary, setAiSummary] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -79,6 +81,7 @@ function ResultReport() {
           const data = await recRes.json()
           setWeakTopics(data.weakTopics ?? [])
           setTargeted(data.courses ?? [])
+          setAiSummary(data.aiSummary ?? null)
         }
       } catch (error) {
         console.error('Failed to fetch result:', error)
@@ -244,6 +247,12 @@ function ResultReport() {
               <h3 className="text-sm font-semibold text-slate-900">
                 คอร์สที่ตรงกับจุดเหล่านี้
               </h3>
+              {aiSummary && (
+                <p className="mt-3 rounded-lg border border-brand-200 bg-brand-50/60 px-4 py-3 text-sm leading-relaxed text-brand-900">
+                  <span className="font-semibold">แผนที่แนะนำ: </span>
+                  {aiSummary}
+                </p>
+              )}
               <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {targeted.map((course) => (
                   <article key={course.id} className="card card-hover flex flex-col p-5">
@@ -268,6 +277,12 @@ function ResultReport() {
                         </span>
                       ))}
                     </div>
+                    {course.aiReason && (
+                      <p className="mt-3 rounded-md bg-slate-50 px-3 py-2 text-[11px] leading-relaxed text-slate-600">
+                        <span className="font-semibold text-slate-700">ทำไมควรเรียนตัวนี้: </span>
+                        {course.aiReason}
+                      </p>
+                    )}
                     <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-3">
                       <span className="text-xs text-slate-500">
                         {course.videoCount} บท · {course.duration} ชม.

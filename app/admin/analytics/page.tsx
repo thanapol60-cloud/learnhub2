@@ -44,6 +44,9 @@ export default function AdminAnalyticsPage() {
   const [pinnedLevel, setPinnedLevel] = useState<string | null>(null)
   const [learners, setLearners] = useState<Learner[]>([])
   const [loadingLearners, setLoadingLearners] = useState(false)
+  const [insight, setInsight] = useState<{ observations: string[]; actions: string[] } | null>(null)
+  const [insightState, setInsightState] = useState<'idle' | 'loading' | 'unavailable'>('idle')
+  const [insightNote, setInsightNote] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -61,6 +64,41 @@ export default function AdminAnalyticsPage() {
 
     fetchStats()
   }, [])
+
+  // ข้อสังเกตจาก AI อ่านข้อมูลจริงของวิชาที่เลือก จึงต้องดึงใหม่ทุกครั้งที่สลับวิชา
+  useEffect(() => {
+    let cancelled = false
+    setInsight(null)
+    setInsightNote(null)
+    setInsightState('loading')
+
+    fetch(`/api/admin/analytics/insight?subject=${subject}`)
+      .then((res) => (res.ok ? res.json() : { available: false, message: 'เรียกไม่สำเร็จ' }))
+      .then((data) => {
+        if (cancelled) return
+        if (data.available) {
+          setInsight(data.insight)
+          setInsightState('idle')
+        } else {
+          setInsightState('unavailable')
+          setInsightNote(
+            data.reason === 'no-key'
+              ? 'ยังไม่ได้ตั้งค่า OpenAI API key — ตั้งได้ที่แท็บตั้งค่า'
+              : data.message || 'สรุปข้อมูลไม่สำเร็จ'
+          )
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setInsightState('unavailable')
+          setInsightNote('เชื่อมต่อไม่สำเร็จ')
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [subject])
 
   // ดึงรายชื่อเฉพาะตอนที่แอดมินคลิกระดับ จึงไม่ต้องส่งผู้เรียนทั้งหมดมาพร้อมหน้า
   useEffect(() => {
@@ -291,28 +329,49 @@ export default function AdminAnalyticsPage() {
             </div>
           </section>
 
-          <section className="grid gap-5 md:grid-cols-2">
-            <div className="card p-6">
-              <h3 className="text-sm font-semibold text-slate-900">
-                ข้อสังเกตจากข้อมูล
-              </h3>
-              <ul className="mt-4 space-y-2.5 text-sm text-slate-600">
-                <li>• ระดับที่พบมากที่สุดสะท้อนกลุ่มผู้เรียนหลักของแพลตฟอร์ม</li>
-                <li>• จำนวนการประเมินเทียบกับผู้เรียนบอกอัตราการทำซ้ำ</li>
-                <li>• การลงทะเบียนคอร์สบอกความต่อเนื่องหลังทราบผล</li>
-              </ul>
+          {/* ข้อสังเกตเหล่านี้สร้างจากข้อมูลจริงของวิชาที่เลือก ไม่ใช่ข้อความสำเร็จรูป */}
+          <section>
+            <div className="mb-3 flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-slate-900">
+                วิเคราะห์โดย AI จากข้อมูลจริง
+              </h2>
+              <span className="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                {active?.name}
+              </span>
             </div>
 
-            <div className="card p-6">
-              <h3 className="text-sm font-semibold text-slate-900">
-                สิ่งที่ควรดำเนินการต่อ
-              </h3>
-              <ul className="mt-4 space-y-2.5 text-sm text-slate-600">
-                <li>• เพิ่มคอร์สสำหรับระดับที่ยังมีเนื้อหารองรับน้อย</li>
-                <li>• เสริมวิดีโอในระดับที่มีผู้เรียนหนาแน่นที่สุด</li>
-                <li>• ทบทวนคลังคำถามในระดับที่มีอัตราตอบผิดสูง</li>
-              </ul>
-            </div>
+            {insightState === 'loading' ? (
+              <div className="card p-6 text-center">
+                <Spinner className="mx-auto h-5 w-5" />
+                <p className="mt-3 text-sm text-slate-500">
+                  กำลังให้ AI อ่านข้อมูลของวิชานี้...
+                </p>
+              </div>
+            ) : insightState === 'unavailable' ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                {insightNote}
+              </div>
+            ) : insight ? (
+              <div className="grid gap-5 md:grid-cols-2">
+                <div className="card p-6">
+                  <h3 className="text-sm font-semibold text-slate-900">ข้อสังเกตจากข้อมูล</h3>
+                  <ul className="mt-4 space-y-2.5 text-sm leading-relaxed text-slate-600">
+                    {insight.observations.map((item, i) => (
+                      <li key={i}>• {item}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="card p-6">
+                  <h3 className="text-sm font-semibold text-slate-900">สิ่งที่ควรดำเนินการต่อ</h3>
+                  <ul className="mt-4 space-y-2.5 text-sm leading-relaxed text-slate-600">
+                    {insight.actions.map((item, i) => (
+                      <li key={i}>• {item}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ) : null}
           </section>
         </div>
       ) : (

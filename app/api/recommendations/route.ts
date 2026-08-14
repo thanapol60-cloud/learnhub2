@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { getUser } from '@/lib/auth-middleware'
 import { isSubjectKey } from '@/lib/subjects'
 import { getProgress } from '@/lib/subject-progress'
+import { rankCourses } from '@/lib/ai/recommend-courses'
 
 export const dynamic = 'force-dynamic'
 
@@ -128,17 +129,54 @@ export async function GET(request: NextRequest) {
       )
       .slice(0, 6)
 
+    const courses = matched.map((item) => ({
+      ...item.course,
+      videoCount: item.course._count.videos,
+      matchedTopics: item.matchedTopics,
+      wrongCovered: item.wrongCovered,
+    }))
+
+    // ให้ AI จัดลำดับใหม่ตามลำดับการเรียนรู้ พร้อมเหตุผลรายคอร์ส
+    // ถ้าใช้ไม่ได้ ลำดับที่คำนวณด้วยกฎยังอยู่ครบ ผู้เรียนจึงได้คำแนะนำเสมอ
+    const ranked = await rankCourses({
+      subject,
+      level: record?.currentLevel ?? '',
+      weakTopics: weakTopics.map((t) => ({
+        topic: t.topic,
+        wrong: t.wrong,
+        attempted: t.attempted,
+      })),
+      courses: courses.map((c) => ({
+        id: c.id,
+        title: c.title,
+        matchedTopics: c.matchedTopics,
+        price: c.price,
+        duration: c.duration,
+      })),
+      userId: user.id,
+    })
+
+    let ordered = courses
+    let aiSummary: string | null = null
+
+    if (ranked.status === 'ok' && ranked.data?.ranking?.length) {
+      const reasons = new Map(ranked.data.ranking.map((r) => [r.courseId, r.reason]))
+      const position = new Map(ranked.data.ranking.map((r, i) => [r.courseId, i]))
+      ordered = [...courses]
+        // คอร์สที่ AI ไม่ได้จัดลำดับให้ ต่อท้ายไว้ ไม่ปล่อยหาย
+        .sort((a, b) => (position.get(a.id) ?? 99) - (position.get(b.id) ?? 99))
+        .map((course) => ({ ...course, aiReason: reasons.get(course.id) ?? null }))
+      aiSummary = ranked.data.summary ?? null
+    }
+
     return NextResponse.json({
       subject,
       currentLevel: record?.currentLevel ?? null,
       answered: answers.length,
       weakTopics,
-      courses: matched.map((item) => ({
-        ...item.course,
-        videoCount: item.course._count.videos,
-        matchedTopics: item.matchedTopics,
-        wrongCovered: item.wrongCovered,
-      })),
+      courses: ordered,
+      aiSummary,
+      aiStatus: ranked.status,
     })
   } catch (error) {
     console.error('Failed to build recommendations:', error)

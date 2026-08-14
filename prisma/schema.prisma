@@ -181,3 +181,22 @@ model Setting {
   updatedAt   DateTime @updatedAt
   updatedById String?
 }
+
+// บันทึกการเรียกใช้ AI ทุกครั้ง
+// มีไว้สองเหตุผล: เป็นหลักฐานว่าระบบ AI ทำงานจริงกี่ครั้งและตัวไหนบ้าง
+// และใช้ไล่ต้นทุนได้ว่าฟีเจอร์ไหนกินโทเคนมากที่สุด
+model AiUsage {
+  id           String   @id @default(cuid())
+  agent        String   // ชื่อตัวแทน AI เช่น explain-answer, recommend-courses
+  model        String
+  status       String   // ok, no-key, error
+  promptTokens Int      @default(0)
+  outputTokens Int      @default(0)
+  latencyMs    Int      @default(0)
+  userId       String?
+  errorMessage String?  @db.Text
+  createdAt    DateTime @default(now())
+
+  @@index([agent])
+  @@index([createdAt])
+}

@@ -12,6 +12,7 @@ const ADMIN_NAV = [
   { href: '/admin/videos', label: 'วิดีโอ' },
   { href: '/admin/courses', label: 'คอร์ส' },
   { href: '/admin/analytics', label: 'สถิติ' },
+  { href: '/admin/ai', label: 'ระบบ AI' },
   { href: '/admin/settings', label: 'ตั้งค่า' },
 ]
 
