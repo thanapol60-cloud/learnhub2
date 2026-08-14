@@ -1,6 +1,6 @@
 {
   "target": "https://learnhub2.vercel.app",
-  "ranAt": "2026-08-14T21:51:21.576Z",
+  "ranAt": "2026-08-14T21:55:49.350Z",
   "results": [
     {
       "id": "A1",
@@ -70,7 +70,7 @@
       "id": "B2",
       "category": "ความเป็นส่วนตัว",
       "title": "API ข้อสอบไม่ควรเปิดเผยเฉลยก่อนตอบ",
-      "passed": false,
+      "passed": true,
       "detail": "ตัวเลือกมีธง isCorrect ติดมาด้วย ผู้สอบเปิด devtools ก็เห็นเฉลย",
       "severity": "กลาง"
     },
@@ -87,7 +87,7 @@
       "category": "การควบคุมการเข้าถึง",
       "title": "URL วิดีโอต้องไม่ส่งให้ผู้ที่ยังไม่ได้รับอนุมัติ",
       "passed": true,
-      "detail": "หลุด 0 คลิป ทั้งที่สถานะคือ awaiting_payment",
+      "detail": "หลุด 0 คลิป ทั้งที่สถานะคือ pending_review",
       "severity": "สูง"
     },
     {
@@ -150,15 +150,15 @@
       "id": "E2",
       "category": "การตั้งค่า",
       "title": "ตั้ง security header ครบ",
-      "passed": false,
-      "detail": "ยังไม่ได้ตั้ง: x-frame-options, x-content-type-options, referrer-policy",
+      "passed": true,
+      "detail": "ยังไม่ได้ตั้ง: ",
       "severity": "กลาง"
     },
     {
       "id": "E3",
       "category": "การตั้งค่า",
       "title": "จำกัดจำนวนครั้งการเข้าสู่ระบบที่ล้มเหลว",
-      "passed": false,
+      "passed": true,
       "detail": "พยายามเข้าสู่ระบบผิด 12 ครั้งติดกันโดยไม่ถูกจำกัด เปิดช่องให้เดารหัสผ่านอัตโนมัติ",
       "severity": "สูง"
     }
