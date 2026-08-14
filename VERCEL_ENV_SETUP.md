@@ -1,8 +1,9 @@
 # Vercel Environment Variables Setup
 
-## ✅ Ready-to-Use Environment Variables
+## ตัวแปรสภาพแวดล้อมที่ต้องตั้งค่า
 
-เตรียมไฟล์ 3 ตัวแปรให้พร้อมแล้ว ให้ Copy ไปใส่ใน Vercel ได้เลย
+> ⚠️ **ห้ามเขียนค่าจริงลงในไฟล์นี้** เอกสารนี้อยู่ในที่เก็บโค้ดสาธารณะ
+> ให้คัดลอกค่าจริงจากผู้ให้บริการแต่ละราย แล้ววางลงใน Vercel Dashboard โดยตรง
 
 ---
 
@@ -19,21 +20,22 @@
 #### **ตัวแปรที่ 1: DATABASE_URL**
 ```
 Name: DATABASE_URL
-Value: mysql://2scrrMY3sMcRgAq.root:6D9pjMfx7lxgQ4Bd@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/learnhub?sslMode=REQUIRE
+Value: <คัดลอกสตริงเชื่อมต่อจาก TiDB Cloud Console → Connect>
+รูปแบบ: mysql://<user>:<password>@<host>:4000/learnhub?sslMode=REQUIRE
 ```
 ✅ Check: Production, Preview, Development
 
 #### **ตัวแปรที่ 2: ANTHROPIC_API_KEY**
 ```
 Name: ANTHROPIC_API_KEY
-Value: sk-ant-placeholder
+Value: <คีย์จาก https://console.anthropic.com/settings/keys>
 ```
 ✅ Check: Production, Preview, Development
 
 #### **ตัวแปรที่ 3: NEXT_PUBLIC_API_URL**
 ```
 Name: NEXT_PUBLIC_API_URL
-Value: https://learnhub2-qsa4.vercel.app
+Value: https://learnhub2.vercel.app
 ```
 ✅ Check: Production, Preview, Development
 

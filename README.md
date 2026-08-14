@@ -1,177 +1,241 @@
-# LearnHub - English Proficiency Assessment Platform
+# LearnHub — แพลตฟอร์มวัดระดับความสามารถและแนะนำคอร์สเรียน
 
-An adaptive English proficiency assessment platform that uses CEFR (Common European Framework of Reference) level evaluation and recommends personalized courses.
+แพลตฟอร์มที่วัดระดับผู้เรียนด้วยข้อสอบแบบปรับความยากอัตโนมัติ ชี้จุดที่ตอบผิดเป็นรายหัวข้อ แล้วแนะนำคอร์สที่ตรงกับจุดนั้นโดยเฉพาะ พร้อมระบบชำระเงินด้วย PromptPay QR
 
-## Features
+**ใช้งานจริงที่:** https://learnhub2.vercel.app
 
-- **User Authentication**: Register and login with different roles (User, Admin)
-- **Adaptive Testing**: Questions adjust in difficulty based on your performance
-- **CEFR Level Assessment**: Receive a standardized English proficiency level (A1-C2)
-- **Dynamic Difficulty**: Advance to harder levels as you improve, demote if you struggle
-- **Course Recommendations**: Get personalized course suggestions based on your level
-- **Progress Tracking**: Monitor your assessment history and improvement over time
-- **Admin Video Upload**: Upload English learning videos with AI-powered level analysis
-- **AI Difficulty Analysis**: Claude AI automatically suggests CEFR level for videos
-- **Course Management**: Create and manage learning courses from uploaded videos
-- **Responsive Design**: Mobile-friendly interface built with Tailwind CSS
+| เอกสาร | เนื้อหา |
+|---|---|
+| [PRD.md](PRD.md) | ปัญหาที่แก้ ขอบเขต และความต้องการของระบบ |
+| [USER_GUIDE.md](USER_GUIDE.md) | **คู่มือการใช้งานสำหรับผู้เรียนและผู้ดูแล** |
+| [CLAUDE.md](CLAUDE.md) | เอกสารทางเทคนิคของสถาปัตยกรรม |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | ขั้นตอนการนำขึ้นระบบ |
+| [SETUP_GUIDE.md](SETUP_GUIDE.md) | การตั้งค่าสภาพแวดล้อมการพัฒนา |
+| [VERCEL_ENV_SETUP.md](VERCEL_ENV_SETUP.md) | การตั้งค่าตัวแปรสภาพแวดล้อมบน Vercel |
 
-## CEFR Levels
+---
 
-- **A1/A2**: Elementary level
-- **B1/B2**: Intermediate and Upper-Intermediate level
-- **C1/C2**: Advanced and Proficiency level
+## ความสามารถหลัก
 
-## Tech Stack
+**สำหรับผู้เรียน**
+- วัดระดับได้ 3 วิชา แต่ละวิชามีบันได 6 ระดับและเกณฑ์เป็นของตัวเอง
+- ข้อสอบปรับความยากตามคำตอบ ไม่ซ้ำข้อ และสลับตำแหน่งตัวเลือกทุกครั้ง
+- รายงานผลชี้ **หัวข้อที่ตอบผิด** ไม่ใช่แค่คะแนนรวม
+- แนะนำคอร์สที่สอนหัวข้อที่พลาดโดยตรง จึงไม่ต้องเรียนใหม่ทั้งระดับ
+- ชำระเงินด้วย PromptPay QR ที่ระบุยอดไว้แล้ว
 
-- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
-- **Backend**: Next.js API Routes
-- **Database**: TiDB/MySQL with Prisma ORM
-- **Deployment**: Vercel (frontend), TiDB Cloud (database)
+**สำหรับผู้ดูแล**
+- รายชื่อผู้เรียนพร้อมระดับของทุกวิชาที่เคยประเมิน
+- อนุมัติหรือปฏิเสธการชำระเงินได้ในคลิกเดียว
+- จัดการวิดีโอและคอร์ส กำหนดวิชา ระดับ และราคา
+- สถิติการกระจายระดับแยกตามวิชา คลิกที่ระดับเพื่อดูรายชื่อผู้เรียนในระดับนั้น
 
-## Getting Started
+---
 
-### Prerequisites
+## เกณฑ์การวัดระดับ
 
-- Node.js 18+
-- npm or yarn
-- TiDB database (or local MySQL)
-- Anthropic API Key (for AI video analysis)
+| วิชา | ระดับ | กรอบอ้างอิง |
+|---|---|---|
+| ภาษาอังกฤษ | A1 → C2 | CEFR |
+| คณิตศาสตร์ | M1 → M6 | เกณฑ์ 6 ระดับ อิงโครง PISA Mathematics Literacy |
+| วิทยาศาสตร์ | S1 → S6 | เกณฑ์ 6 ระดับ อิงโครง PISA Science Literacy |
 
-### Installation
+ทุกวิชามี 6 ระดับเท่ากัน จึงใช้กลไกปรับระดับชุดเดียวกัน คำบรรยายแต่ละระดับอยู่ใน [lib/subjects.ts](lib/subjects.ts)
 
-1. Clone the repository
+**ที่มาของข้อสอบ:** เขียนขึ้นเองสำหรับระบบนี้โดยยึดคำบรรยายระดับที่เผยแพร่เป็นสาธารณะ ไม่ได้คัดลอกจากคลังข้อสอบเชิงพาณิชย์
+
+---
+
+## เทคโนโลยีที่ใช้
+
+- **ส่วนหน้า:** Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS
+- **ส่วนหลัง:** Next.js API Routes
+- **ฐานข้อมูล:** TiDB (เข้ากันได้กับ MySQL) ผ่าน Prisma ORM
+- **การชำระเงิน:** PromptPay EMVCo QR สร้างฝั่งเซิร์ฟเวอร์เป็น SVG
+- **การนำขึ้นระบบ:** Vercel + TiDB Cloud
+
+---
+
+## การติดตั้งสำหรับนักพัฒนา
+
+### สิ่งที่ต้องมีก่อน
+
+- Node.js 18 ขึ้นไป
+- ฐานข้อมูล TiDB Cloud หรือ MySQL ในเครื่อง
+
+### ขั้นตอน
+
+**1. ติดตั้ง dependency**
 ```bash
-cd learnhub2
 npm install
 ```
 
-2. Create a `.env.local` file with your configuration
+**2. สร้างไฟล์ `.env.local`**
 ```bash
-DATABASE_URL="mysql://user:password@localhost:3306/learnhub"
-ANTHROPIC_API_KEY="your-anthropic-api-key"
-NEXT_PUBLIC_API_URL="http://localhost:3000"
+DATABASE_URL="mysql://user:password@host:4000/learnhub"
+ADMIN_REGISTER_CODE="ตั้งรหัสของคุณเอง"
+PROMPTPAY_ID="0910391036"
+PROMPTPAY_NAME="LearnHub"
+ANTHROPIC_API_KEY="sk-ant-..."   # ไม่บังคับ ใช้กับฟีเจอร์ AI
 ```
 
-3. Generate Prisma client
+> ⚠️ `.env.local` อยู่ใน `.gitignore` แล้ว ห้าม commit ไฟล์นี้เข้า git
+
+**3. สร้าง Prisma client และ push สคีมา**
 ```bash
 npm run db:generate
-```
-
-4. Push schema to database
-```bash
 npm run db:push
 ```
 
-5. Seed sample questions
+**4. ใส่ข้อมูลตัวอย่าง** (รันตามลำดับ)
 ```bash
-npm run seed
+node scripts/seed-questions.mjs       # ข้อสอบภาษาอังกฤษ 120 ข้อ
+node scripts/seed-reading.mjs         # ข้อสอบการอ่าน 30 ข้อ
+node scripts/tag-question-topics.mjs  # ติดแท็กหัวข้อให้ข้อสอบ
+node scripts/seed-demo.mjs            # คอร์สและวิดีโอตัวอย่าง
+node scripts/seed-focused-courses.mjs # คอร์สเจาะหัวข้อภาษาอังกฤษ
+node scripts/seed-math.mjs            # ข้อสอบคณิตศาสตร์ 60 ข้อ
+node scripts/seed-science.mjs         # ข้อสอบวิทยาศาสตร์ 60 ข้อ
+node scripts/seed-stem-courses.mjs    # คอร์สคณิต/วิทย์
+node scripts/seed-students.mjs        # ผู้เรียนตัวอย่าง 30 คน
+node scripts/seed-stem-students.mjs   # ผู้เรียนสายวิทย์-คณิต 18 คน
 ```
 
-6. Start the development server
+> สคริปต์ทุกตัวรันซ้ำได้และมีตัวตรวจข้อมูลก่อนเขียนฐานข้อมูล ถ้าข้อสอบข้อใดไม่ครบ 4 ตัวเลือกหรือเฉลยไม่ตรง สคริปต์จะปฏิเสธการเขียนทั้งชุดและรายงานว่าข้อไหนผิด
+
+**5. เริ่มเซิร์ฟเวอร์**
 ```bash
 npm run dev
 ```
+เปิด http://localhost:3000
 
-Open [http://localhost:3000](http://localhost:3000) to see the application.
+**บัญชีทดลอง** รหัสผ่าน `Learnhub2026` — `student01@learnhub.demo` ถึง `student30@learnhub.demo` และ `stem01@stem.learnhub.demo` ถึง `stem18@stem.learnhub.demo`
 
-## Usage
+---
 
-### For Students (User Role)
-1. **Register/Login** (`/register`, `/login`): Create account as a user
-2. **Home Page** (`/`): Start an assessment or view your dashboard
-3. **Assessment** (`/assessment`): Take the adaptive English test
-4. **Result** (`/result`): View your CEFR level and recommended courses
-5. **Dashboard** (`/dashboard`): Track your progress and history
-6. **Courses** (`/courses`): Browse all available courses
+## โครงสร้างโค้ด
 
-### For Administrators (Admin Role)
-1. **Register as Admin** (`/register`): Select "Admin" role when registering
-2. **Admin Dashboard** (`/admin/dashboard`): Main admin interface
-3. **Manage Videos** (`/admin/videos`):
-   - Upload English learning video clips
-   - AI automatically analyzes and suggests CEFR level
-   - Manually adjust the assigned level if needed
-   - Add videos to existing courses
-4. **Manage Courses** (`/admin/courses`):
-   - Create new courses with CEFR level requirements
-   - Set course metadata (instructor, duration, learning outcomes)
-   - Add uploaded videos to courses
+```
+learnhub2/
+├── app/
+│   ├── api/                     # API Routes
+│   │   ├── admin/               # เฉพาะผู้ดูแล (นักเรียน คอร์ส วิดีโอ สถิติ)
+│   │   ├── assessment/          # เริ่มสอบ ส่งคำตอบ ดูผล
+│   │   ├── auth/                # สมัคร เข้าสู่ระบบ ออกจากระบบ
+│   │   ├── enrollments/         # การลงทะเบียนของผู้เรียน
+│   │   ├── payment/qr/          # สร้าง PromptPay QR
+│   │   ├── question/            # เสิร์ฟข้อสอบ
+│   │   └── recommendations/     # แนะนำคอร์สจากจุดที่ตอบผิด
+│   ├── admin/                   # หน้าคอนโซลผู้ดูแล
+│   ├── assessment/              # หน้าทำข้อสอบ
+│   ├── courses/                 # แคตตาล็อกและหน้าคอร์ส
+│   ├── dashboard/               # ความก้าวหน้าของผู้เรียน
+│   └── result/                  # รายงานผลการประเมิน
+├── lib/
+│   ├── subjects.ts              # วิชาและเกณฑ์ระดับของแต่ละวิชา
+│   ├── subject-progress.ts      # อ่าน/เขียนความคืบหน้าโดยไม่สนใจว่าวิชาไหน
+│   ├── assessment.ts            # ค่าคงที่ของกลไกปรับระดับ
+│   ├── topics.ts                # ชื่อหัวข้อภาษาไทย
+│   ├── payment.ts               # สร้าง PromptPay payload (ฝั่งเซิร์ฟเวอร์เท่านั้น)
+│   ├── enrollment-status.ts     # สถานะการชำระเงิน (ใช้ได้ทั้งสองฝั่ง)
+│   └── auth.ts, auth-middleware.ts, db.ts, cefr.ts
+├── components/                  # คอมโพเนนต์ที่ใช้ซ้ำ
+├── prisma/schema.prisma         # สคีมาฐานข้อมูล
+└── scripts/                     # สคริปต์ใส่ข้อมูลตัวอย่าง
+```
+
+**หลักการที่ใช้จัดโครงสร้าง**
+
+- `lib/payment.ts` แยกจาก `lib/enrollment-status.ts` เพราะตัวแรกใช้ไลบรารีที่รันได้เฉพาะฝั่ง Node ถ้ารวมกันจะถูกดึงเข้า bundle ฝั่งไคลเอนต์
+- `lib/subject-progress.ts` ซ่อนความจริงที่ว่าระดับภาษาอังกฤษเก็บในตาราง `User` ส่วนวิชาอื่นเก็บใน `SubjectProgress` เส้นทางการสอบจึงเขียนครั้งเดียวใช้ได้ทุกวิชา
+- คอลัมน์ `cefrLevel` และ `minCefrLevel` ยังใช้ชื่อเดิมแต่เก็บระดับของวิชานั้น ๆ (เช่น `M3`) เพราะมีโค้ดอ้างอิงหลายจุด มีคอมเมนต์กำกับในสคีมาแล้ว
+
+---
+
+## กลไกการปรับระดับ
+
+```
+เริ่มที่ระดับต่ำสุดของวิชาเสมอ
+  ├─ ตอบถูกติดกัน 3 ข้อในระดับเดิม  → เลื่อนขึ้นหนึ่งระดับ
+  ├─ ตอบผิดติดกัน 2 ข้อในระดับเดิม  → ลดลงหนึ่งระดับ
+  └─ ทำครบ 25 ข้อ                   → สรุปผล
+```
+
+รายละเอียดที่มีผลต่อความถูกต้องของการวัด
+
+- **ตรวจคำตอบฝั่งเซิร์ฟเวอร์เสมอ** ไคลเอนต์ส่งผลการตรวจมาเองไม่ได้
+- **สลับตำแหน่งตัวเลือกทุกครั้งที่เสิร์ฟ** เพราะคลังข้อสอบเดิมมีเฉลยอยู่ตัวเลือกแรก 92 จาก 180 ข้อ ถ้าไม่สลับ ผู้เรียนที่เดาข้อแรกจะได้คะแนนสูงกว่าการสุ่ม
+- **นับสตรีคเฉพาะช่วงที่อยู่ระดับนั้นจริง** ถ้านับจากทุกคำตอบในระดับเดียวกัน ผู้เรียนที่เพิ่งถูกลดระดับจะเด้งกลับขึ้นทันทีด้วยคำตอบถูกเพียงข้อเดียว
+- **ข้อสอบหมดระดับแล้วเลื่อนไประดับข้างเคียง** แทนที่จะจบการสอบกลางคัน
+
+---
 
 ## API Endpoints
 
-- `POST /api/assessment` - Initialize a new assessment
-- `GET /api/question?level=A1` - Get a question for a specific level
-- `POST /api/assessment/answer` - Submit an answer
-- `POST /api/assessment/advance` - Advance to next level
-- `GET /api/assessment/result` - Get assessment results
-- `GET /api/dashboard` - Get user dashboard data
-- `GET /api/courses` - Get all available courses
+พารามิเตอร์ `subject` ใส่ได้ทั้ง `english`, `math`, `science` — ถ้าไม่ระบุจะถือว่าเป็น `english`
 
-## Database Schema
+**การประเมิน**
+| Method | Endpoint | หน้าที่ |
+|---|---|---|
+| POST | `/api/assessment` | เริ่มการประเมินใหม่ (body: `{subject}`) |
+| GET | `/api/question?subject=&level=` | ขอข้อสอบถัดไป |
+| POST | `/api/assessment/answer` | ส่งคำตอบ (วิชาอ่านจากตัวข้อสอบเอง) |
+| GET | `/api/assessment/result?subject=` | สรุปผล |
+| GET | `/api/recommendations?subject=` | จุดอ่อนและคอร์สที่แนะนำ |
 
-### User
-- Tracks current CEFR level and assessment statistics
-- Stores correct/wrong answer counts
+**ผู้เรียน**
+| Method | Endpoint | หน้าที่ |
+|---|---|---|
+| GET | `/api/dashboard` | ระดับทุกวิชาและสถิติ |
+| GET | `/api/courses` | รายการคอร์สทั้งหมด |
+| GET/POST | `/api/enrollments` | ดู/สร้างการลงทะเบียน |
+| PATCH/DELETE | `/api/enrollments/:id` | แจ้งโอน / ยกเลิกที่ยังไม่จ่าย |
+| GET | `/api/payment/qr?enrollmentId=` | PromptPay QR (ยอดอ่านจากฐานข้อมูล) |
 
-### Question
-- Contains English proficiency questions
-- Includes options, explanations, and difficulty ratings
-- Categorized by CEFR level
+**ผู้ดูแล**
+| Method | Endpoint | หน้าที่ |
+|---|---|---|
+| GET | `/api/admin/students` | ผู้เรียนทุกคนพร้อมระดับรายวิชาและการชำระเงิน |
+| PATCH | `/api/admin/enrollments/:id` | อนุมัติหรือปฏิเสธการชำระเงิน |
+| GET | `/api/admin/analytics` | สถิติแยกตามวิชา |
+| GET | `/api/admin/analytics/learners?subject=&level=` | รายชื่อผู้เรียนในระดับที่ระบุ |
+| GET/POST | `/api/admin/courses`, `/api/admin/videos` | จัดการคอร์สและวิดีโอ |
 
-### AssessmentRecord
-- Records each answer during assessment
-- Tracks progression through levels
+---
 
-### Course
-- Stores available courses
-- Recommends based on CEFR level
+## สถานะปัจจุบันและข้อจำกัดที่ทราบ
 
-## Assessment Algorithm
+**คลังข้อมูล**
 
-### Student Assessment
-The platform uses an adaptive testing algorithm:
-- Start at level A1
-- Answer 3 consecutive correct questions → Can advance to next level
-- Answer 2 consecutive wrong questions → Demote to previous level
-- Cannot advance without mastering current level
-- Minimum of 10 questions before showing final results
+| วิชา | ข้อสอบ | หัวข้อ | คอร์ส |
+|---|---|---|---|
+| ภาษาอังกฤษ | 210 | 35 | 37 |
+| คณิตศาสตร์ | 60 | 32 | 27 |
+| วิทยาศาสตร์ | 60 | 22 | 25 |
 
-### AI Video Analysis
-When an admin uploads a video, Claude AI automatically:
-1. Analyzes the video title and description
-2. Considers vocabulary complexity and grammar level
-3. Evaluates speaking pace and content difficulty
-4. Suggests an appropriate CEFR level (A1-C2)
-5. Provides reasoning for the suggested level
-6. Admin can override the AI suggestion if needed
+**ข้อจำกัดที่ต้องแก้ก่อนใช้งานจริง** (รายละเอียดใน [PRD.md](PRD.md) หัวข้อ 8)
 
-## Deployment to Vercel
+1. **การตรวจสอบสิทธิ์ผู้ดูแลเชื่อค่าคุกกี้โดยตรง จึงปลอมสิทธิ์ได้** — ต้องแก้ก่อนเปิดใช้งานกับข้อมูลจริง
+2. การเข้ารหัสรหัสผ่านใช้ salt ค่าคงที่และจำนวนรอบต่ำกว่ามาตรฐานปัจจุบัน
+3. ฟีเจอร์ AI ชี้ไปยังโมเดลที่ปลดระวางแล้ว จึงตกไปใช้ค่า fallback เงียบ ๆ
+4. ยังไม่มีการจำกัดจำนวนครั้งการเข้าสู่ระบบ
+5. ยังไม่มีชุดทดสอบอัตโนมัติถาวร ทดสอบด้วยสคริปต์เฉพาะกิจ
+6. ยังไม่มีระบบรีเซ็ตรหัสผ่านด้วยตัวเอง
+
+---
+
+## การนำขึ้นระบบ
 
 ```bash
-npm run build
-# Push to GitHub then deploy via Vercel
+npm run build          # prisma generate + next build
 ```
 
-## Deployment to TiDB
+จากนั้น push เข้า GitHub — Vercel จะปรับใช้อัตโนมัติ อย่าลืมตั้งตัวแปรสภาพแวดล้อมบน Vercel ให้ครบตาม [VERCEL_ENV_SETUP.md](VERCEL_ENV_SETUP.md)
 
-1. Create a TiDB Cloud cluster
-2. Update `DATABASE_URL` environment variable
-3. Run `npm run db:push` to initialize schema
+ขั้นตอนเต็มอยู่ใน [DEPLOYMENT.md](DEPLOYMENT.md)
 
-## Future Enhancements
-
-- [ ] Audio/listening component
-- [ ] Speaking assessment via speech recognition
-- [ ] More comprehensive question bank
-- [ ] User authentication and accounts
-- [ ] Progress analytics and reports
-- [ ] Leaderboards and achievement badges
-- [ ] Mobile app version
+---
 
 ## License
 
 MIT
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.

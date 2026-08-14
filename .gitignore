@@ -47,3 +47,7 @@ Thumbs.db
 # Prisma
 prisma/dev.db
 prisma/dev.db-journal
+
+# ไฟล์แพ็กเกจซอร์สโค้ดสำหรับส่งงาน สร้างใหม่ได้ด้วย scripts/package-source.mjs
+Sourcecode.zip
+.sourcecode-files.txt
