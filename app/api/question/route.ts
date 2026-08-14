@@ -72,7 +72,19 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const question = candidates[Math.floor(Math.random() * candidates.length)]
+    const picked = candidates[Math.floor(Math.random() * candidates.length)]
+
+    // ตัวเลือกถูกเก็บตามลำดับที่ผู้เขียนข้อสอบใส่ไว้ ซึ่งเอียงไปทางข้อแรก
+    // (เคยวัดได้ว่าเฉลยอยู่ข้อแรก 51% ของคลัง) ถ้าไม่สลับ ผู้เรียนเดาข้อแรก
+    // ก็ได้คะแนนเกินการสุ่ม ระดับที่วัดได้จะสูงกว่าความจริง
+    // การตรวจคำตอบเทียบด้วยข้อความ ไม่ใช่ตำแหน่ง จึงสลับตอนส่งได้อย่างปลอดภัย
+    const options = Array.isArray(picked.options) ? [...(picked.options as unknown[])] : []
+    for (let i = options.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[options[i], options[j]] = [options[j], options[i]]
+    }
+    const question = { ...picked, options }
+
     const totalAnswered = record.correctAnswers + record.wrongAnswers
     const levelIndex = CEFR_LEVELS.indexOf(record.currentLevel as CEFRLevel)
 
