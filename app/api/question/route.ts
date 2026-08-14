@@ -108,7 +108,19 @@ export async function GET(request: NextRequest) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[options[i], options[j]] = [options[j], options[i]]
     }
-    const question = { ...picked, options }
+
+    // ตัดธง isCorrect ออกก่อนส่ง — เดิมส่งติดไปด้วย ผู้สอบที่เปิดแท็บ Network
+    // ก็อ่านเฉลยได้ทุกข้อ ทำให้ระดับที่วัดได้ไม่มีความหมาย
+    // (พบจากชุดทดสอบความปลอดภัย กรณี B2) การตรวจคำตอบเทียบด้วยข้อความที่ฝั่งเซิร์ฟเวอร์
+    // จึงไม่ต้องใช้ธงนี้ที่ฝั่งไคลเอนต์เลย
+    const safeOptions = options.map((option) => {
+      const { text } = option as { text: string }
+      return { text }
+    })
+
+    // คำอธิบายก็ต้องไม่ส่งไปพร้อมโจทย์ เพราะมักบอกว่าข้อไหนถูก
+    const { explanation, ...rest } = picked
+    const question = { ...rest, options: safeOptions }
 
     const totalAnswered = progress.correctAnswers + progress.wrongAnswers
     const levelIndex = levels.indexOf(progress.currentLevel)

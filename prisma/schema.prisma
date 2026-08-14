@@ -200,3 +200,15 @@ model AiUsage {
   @@index([agent])
   @@index([createdAt])
 }
+
+// บันทึกการพยายามเข้าสู่ระบบที่ล้มเหลว ใช้จำกัดการเดารหัสผ่านอัตโนมัติ
+// เก็บในฐานข้อมูลแทนหน่วยความจำ เพราะบน Vercel แต่ละคำขออาจไปคนละอินสแตนซ์
+// ตัวนับในหน่วยความจำจึงกันอะไรไม่ได้จริง
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+}

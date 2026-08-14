@@ -16,7 +16,8 @@ interface Question {
   id: string
   passage?: string | null
   question: string
-  options: Array<{ text: string; isCorrect: boolean }>
+  // เซิร์ฟเวอร์ไม่ส่งธง isCorrect มาแล้ว เพื่อไม่ให้ผู้สอบอ่านเฉลยจากแท็บ Network
+  options: Array<{ text: string }>
   cefrLevel: string
   category?: string
 }

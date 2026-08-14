@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifyPassword } from '@/lib/auth'
+import { checkLoginRate, recordLoginFailure, clearLoginFailures } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,16 +14,37 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // ตรวจอัตราก่อนแตะฐานข้อมูลผู้ใช้ เพื่อไม่ให้การเดารหัสผ่านกินทรัพยากรฟรี
+    const rate = await checkLoginRate(email)
+    if (rate.blocked) {
+      return NextResponse.json(
+        {
+          error: `พยายามเข้าสู่ระบบผิดหลายครั้งเกินไป กรุณารออีก ${Math.ceil(
+            rate.retryAfterSeconds / 60
+          )} นาที`,
+        },
+        { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } }
+      )
+    }
+
     const user = await prisma.user.findUnique({
       where: { email },
     })
 
     if (!user || !verifyPassword(password, user.password)) {
+      const ip =
+        request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+        request.headers.get('x-real-ip')
+      await recordLoginFailure(email, ip)
+      // ข้อความเดียวกันทั้งกรณีไม่มีบัญชีและรหัสผ่านผิด
+      // เพื่อไม่ให้ใช้หน้านี้ไล่ตรวจว่าอีเมลใดมีอยู่ในระบบ
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
       )
     }
+
+    await clearLoginFailures(email)
 
     const response = NextResponse.json(
       {
