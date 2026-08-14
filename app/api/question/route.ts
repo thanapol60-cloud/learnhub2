@@ -50,10 +50,12 @@ export async function GET(request: NextRequest) {
       },
       select: {
         id: true,
+        passage: true,
         question: true,
         options: true,
         explanation: true,
         cefrLevel: true,
+        category: true,
       },
     })
 

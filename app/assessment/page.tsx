@@ -13,9 +13,11 @@ const OPTION_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']
 
 interface Question {
   id: string
+  passage?: string | null
   question: string
   options: Array<{ text: string; isCorrect: boolean }>
   cefrLevel: string
+  category?: string
 }
 
 interface AnswerResult {
@@ -230,6 +232,16 @@ export default function AssessmentPage() {
             </div>
 
             <div className="p-6 sm:p-8">
+              {/* หมวด reading: บทความอ่านต้องแยกออกจากตัวคำถามให้ชัด */}
+              {question.passage && (
+                <figure className="mb-6 rounded-lg border border-slate-200 bg-slate-50/70 p-5">
+                  <figcaption className="eyebrow mb-3">อ่านบทความต่อไปนี้</figcaption>
+                  <p className="whitespace-pre-line text-[15px] leading-[1.9] text-slate-800">
+                    {question.passage}
+                  </p>
+                </figure>
+              )}
+
               <h1 className="text-xl font-semibold leading-relaxed text-slate-900 sm:text-2xl">
                 {question.question}
               </h1>

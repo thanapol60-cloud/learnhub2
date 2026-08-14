@@ -32,6 +32,8 @@ model User {
 
 model Question {
   id                    String      @id @default(cuid())
+  // บทความสั้นสำหรับข้อสอบหมวด reading — ข้อสอบหมวดอื่นเป็น null
+  passage               String?     @db.LongText
   question              String      @db.LongText
   options               Json        // [{text: string, isCorrect: boolean}]
   correctAnswer         String
