@@ -13,6 +13,15 @@ export interface AssessmentState {
 const QUESTIONS_BEFORE_ADVANCE = 3
 const CONSECUTIVE_WRONG_BEFORE_DEMOTE = 2
 
+/**
+ * จำนวนข้อต่อการประเมินหนึ่งครั้ง
+ *
+ * ยิ่งมากยิ่งวัดระดับได้นิ่งขึ้น เพราะการเดาถูกสองสามข้อจะไม่ดันระดับทั้งชุด
+ * เพดานคือจำนวนข้อที่มีในหนึ่งระดับ (ตอนนี้ระดับละ 35 ข้อ) เพราะผู้เรียนที่อยู่
+ * ระดับเดิมทั้งชุดต้องได้ข้อใหม่ทุกข้อโดยไม่ซ้ำ ถ้าตั้งเกินจำนวนนั้นข้อสอบจะหมดกลางคัน
+ */
+export const TOTAL_QUESTIONS_PER_ATTEMPT = 25
+
 export function initializeAssessment(startLevel: CEFRLevel = 'A1'): AssessmentState {
   return {
     currentLevel: startLevel,

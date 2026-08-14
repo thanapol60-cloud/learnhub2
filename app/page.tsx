@@ -132,7 +132,7 @@ export default function Home() {
 
             <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-white/10 pt-6">
               {[
-                { k: '15', v: 'ข้อต่อการประเมิน' },
+                { k: '25', v: 'ข้อต่อการประเมิน' },
                 { k: '6', v: 'ระดับ A1 – C2' },
                 { k: '~15', v: 'นาทีโดยเฉลี่ย' },
               ].map((item) => (

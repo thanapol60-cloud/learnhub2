@@ -7,8 +7,9 @@ import { CEFRLevel, CEFR_DESCRIPTIONS } from '@/lib/cefr'
 import { BrandMark } from '@/components/brand-mark'
 import { CefrBadge, Spinner } from '@/components/ui'
 import { IconArrowRight, IconCheck, IconClose } from '@/components/icons'
+import { TOTAL_QUESTIONS_PER_ATTEMPT } from '@/lib/assessment'
 
-const TOTAL_QUESTIONS = 15
+const TOTAL_QUESTIONS = TOTAL_QUESTIONS_PER_ATTEMPT
 const OPTION_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']
 
 interface Question {
