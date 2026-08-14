@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getUser } from '@/lib/auth-middleware'
+import { isSubjectKey } from '@/lib/subjects'
+import { getProgress } from '@/lib/subject-progress'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,15 +25,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  try {
-    const record = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: { currentLevel: true, assessmentStartedAt: true },
-    })
+  const subjectParam = request.nextUrl.searchParams.get('subject') ?? 'english'
+  if (!isSubjectKey(subjectParam)) {
+    return NextResponse.json({ error: 'ไม่รู้จักวิชานี้' }, { status: 400 })
+  }
+  const subject = subjectParam
 
+  try {
+    const record = await getProgress(user.id, subject)
+
+    // นับเฉพาะข้อของวิชานี้ หัวข้อของคนละวิชาจึงไม่ปนกัน
     const answers = await prisma.assessmentRecord.findMany({
       where: {
         userId: user.id,
+        question: { subject },
         ...(record?.assessmentStartedAt
           ? { createdAt: { gte: record.assessmentStartedAt } }
           : {}),
@@ -73,10 +80,11 @@ export async function GET(request: NextRequest) {
 
     if (weakTopics.length === 0) {
       return NextResponse.json({
+        subject,
         weakTopics: [],
         courses: [],
         answered: answers.length,
-        currentLevel: record?.currentLevel ?? 'A1',
+        currentLevel: record?.currentLevel ?? null,
       })
     }
 
@@ -85,8 +93,10 @@ export async function GET(request: NextRequest) {
     // ดึงคอร์สที่มีแท็กหัวข้อ แล้วจับคู่ในหน่วยความจำ — TiDB/MySQL ค้นใน JSON array
     // ด้วย Prisma ตรง ๆ ไม่ได้ และจำนวนคอร์สยังอยู่ในหลักสิบ
     const candidates = await prisma.course.findMany({
+      where: { subject },
       select: {
         id: true,
+        subject: true,
         title: true,
         description: true,
         minCefrLevel: true,
@@ -119,7 +129,8 @@ export async function GET(request: NextRequest) {
       .slice(0, 6)
 
     return NextResponse.json({
-      currentLevel: record?.currentLevel ?? 'A1',
+      subject,
+      currentLevel: record?.currentLevel ?? null,
       answered: answers.length,
       weakTopics,
       courses: matched.map((item) => ({

@@ -37,7 +37,7 @@ export function AuthLayout({
               LearnHub
             </span>
             <span className="block text-[11px] uppercase tracking-[0.14em] text-white/60">
-              English Proficiency Assessment
+              Adaptive Proficiency Assessment
             </span>
           </span>
         </Link>

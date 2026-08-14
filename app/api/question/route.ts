@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
-import { CEFRLevel, CEFR_LEVELS } from '@/lib/cefr'
 import { getUser } from '@/lib/auth-middleware'
+import { prisma } from '@/lib/db'
+import { isSubjectKey, levelsOf } from '@/lib/subjects'
+import { getProgress } from '@/lib/subject-progress'
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,24 +11,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const record = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: {
-        currentLevel: true,
-        correctAnswers: true,
-        wrongAnswers: true,
-        assessmentStartedAt: true,
-      },
-    })
+    const subjectParam = request.nextUrl.searchParams.get('subject') ?? 'english'
+    if (!isSubjectKey(subjectParam)) {
+      return NextResponse.json({ error: 'ไม่รู้จักวิชานี้' }, { status: 400 })
+    }
+    const subject = subjectParam
+    const levels = levelsOf(subject)
 
-    if (!record) {
+    const progress = await getProgress(user.id, subject)
+    if (!progress) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const level = (request.nextUrl.searchParams.get('level') ||
-      record.currentLevel) as CEFRLevel
-
-    if (!CEFR_LEVELS.includes(level)) {
+    const level = request.nextUrl.searchParams.get('level') || progress.currentLevel
+    if (!levels.includes(level)) {
       return NextResponse.json({ error: 'Invalid level' }, { status: 400 })
     }
 
@@ -35,41 +32,66 @@ export async function GET(request: NextRequest) {
     const answered = await prisma.assessmentRecord.findMany({
       where: {
         userId: user.id,
-        ...(record.assessmentStartedAt
-          ? { createdAt: { gte: record.assessmentStartedAt } }
+        ...(progress.assessmentStartedAt
+          ? { createdAt: { gte: progress.assessmentStartedAt } }
           : {}),
       },
       select: { questionId: true },
     })
     const answeredIds = answered.map((a) => a.questionId)
 
-    const candidates = await prisma.question.findMany({
-      where: {
-        cefrLevel: level,
-        id: { notIn: answeredIds.length > 0 ? answeredIds : undefined },
-      },
-      select: {
-        id: true,
-        passage: true,
-        question: true,
-        options: true,
-        explanation: true,
-        cefrLevel: true,
-        category: true,
-        topic: true,
-      },
-    })
+    const pickFrom = (candidateLevel: string) =>
+      prisma.question.findMany({
+        where: {
+          subject,
+          cefrLevel: candidateLevel,
+          id: { notIn: answeredIds.length > 0 ? answeredIds : undefined },
+        },
+        select: {
+          id: true,
+          passage: true,
+          question: true,
+          options: true,
+          explanation: true,
+          cefrLevel: true,
+          category: true,
+          topic: true,
+        },
+      })
+
+    let candidates = await pickFrom(level)
+    let servedLevel = level
+
+    // ถ้าข้อในระดับนี้ถูกใช้หมดแล้ว ให้ขยับไปหาระดับข้างเคียงแทนที่จะจบการสอบกลางคัน
+    // เรียงจากใกล้ไปไกล เพื่อให้ความยากยังใกล้เคียงระดับที่ผู้เรียนอยู่
+    if (candidates.length === 0) {
+      const index = levels.indexOf(level)
+      const neighbours = levels
+        .map((lv, i) => ({ lv, distance: Math.abs(i - index) }))
+        .filter((entry) => entry.distance > 0)
+        .sort((a, b) => a.distance - b.distance)
+
+      for (const neighbour of neighbours) {
+        const found = await pickFrom(neighbour.lv)
+        if (found.length > 0) {
+          candidates = found
+          servedLevel = neighbour.lv
+          break
+        }
+      }
+    }
 
     if (candidates.length === 0) {
-      const bankSize = await prisma.question.count()
+      const bankSize = await prisma.question.count({ where: { subject } })
       return NextResponse.json(
         {
           error:
             bankSize === 0
-              ? 'No questions in the database. An admin needs to seed the question bank.'
-              : `No unanswered questions left at level ${level}.`,
+              ? 'ยังไม่มีข้อสอบของวิชานี้ในระบบ ผู้ดูแลต้องเพิ่มคลังข้อสอบก่อน'
+              : `ข้อสอบวิชานี้ถูกใช้ครบทุกข้อแล้วในการสอบรอบนี้`,
           exhausted: true,
-          currentLevel: record.currentLevel,
+          currentLevel: progress.currentLevel,
+          subject,
         },
         { status: 404 }
       )
@@ -88,15 +110,17 @@ export async function GET(request: NextRequest) {
     }
     const question = { ...picked, options }
 
-    const totalAnswered = record.correctAnswers + record.wrongAnswers
-    const levelIndex = CEFR_LEVELS.indexOf(record.currentLevel as CEFRLevel)
+    const totalAnswered = progress.correctAnswers + progress.wrongAnswers
+    const levelIndex = levels.indexOf(progress.currentLevel)
 
     return NextResponse.json({
       question,
-      currentLevel: record.currentLevel,
-      progress: Math.round(((levelIndex + 1) / CEFR_LEVELS.length) * 100),
+      subject,
+      currentLevel: progress.currentLevel,
+      servedLevel,
+      progress: Math.round(((levelIndex + 1) / levels.length) * 100),
       totalAnswered,
-      correctAnswers: record.correctAnswers,
+      correctAnswers: progress.correctAnswers,
       remainingAtLevel: candidates.length,
     })
   } catch (error) {

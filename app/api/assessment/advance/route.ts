@@ -1,10 +1,9 @@
-import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
-import { getNextLevel } from '@/lib/assessment'
-import { CEFRLevel } from '@/lib/cefr'
+import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { isSubjectKey } from '@/lib/subjects'
+import { getProgress, nextLevelOf, setLevel } from '@/lib/subject-progress'
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
     const cookieStore = await cookies()
     const userId = cookieStore.get('userId')?.value
@@ -16,18 +15,21 @@ export async function POST() {
       )
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    })
+    const body = await request.json().catch(() => ({}))
+    const subject = body?.subject ?? 'english'
+    if (!isSubjectKey(subject)) {
+      return NextResponse.json({ error: 'ไม่รู้จักวิชานี้' }, { status: 400 })
+    }
 
-    if (!user) {
+    const progress = await getProgress(userId, subject)
+    if (!progress) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
       )
     }
 
-    const nextLevel = getNextLevel(user.currentLevel as CEFRLevel)
+    const nextLevel = nextLevelOf(subject, progress.currentLevel)
     if (!nextLevel) {
       return NextResponse.json(
         { error: 'Already at maximum level' },
@@ -35,16 +37,10 @@ export async function POST() {
       )
     }
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        currentLevel: nextLevel,
-        correctAnswers: 0,
-        wrongAnswers: 0,
-      },
-    })
+    await setLevel(userId, subject, nextLevel)
 
     return NextResponse.json({
+      subject,
       newLevel: nextLevel,
       message: 'Level advanced successfully',
     })

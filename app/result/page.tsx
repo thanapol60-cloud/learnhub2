@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { CEFRLevel, CEFR_DESCRIPTIONS, CEFR_LEVELS } from '@/lib/cefr'
+import { useSearchParams } from 'next/navigation'
+import { describeLevel, isSubjectKey, SUBJECTS, SubjectKey } from '@/lib/subjects'
 import { SiteHeader } from '@/components/site-header'
 import { SiteFooter } from '@/components/site-footer'
 import { CefrBadge, EmptyState, LoadingScreen } from '@/components/ui'
@@ -20,7 +21,7 @@ interface Course {
   id: string
   title: string
   description: string
-  minCefrLevel: CEFRLevel
+  minCefrLevel: string
   instructorName?: string
   duration: number
   price: number
@@ -29,7 +30,7 @@ interface Course {
 }
 
 interface ResultData {
-  cefrLevel: CEFRLevel
+  cefrLevel: string
   totalQuestions: number
   correctAnswers: number
   accuracy: number
@@ -55,7 +56,12 @@ interface FocusedCourse {
   matchedTopics: string[]
 }
 
-export default function ResultPage() {
+function ResultReport() {
+  const searchParams = useSearchParams()
+  const subjectParam = searchParams.get('subject')
+  const subject: SubjectKey = isSubjectKey(subjectParam) ? subjectParam : 'english'
+  const definition = SUBJECTS[subject]
+
   const [result, setResult] = useState<ResultData | null>(null)
   const [weakTopics, setWeakTopics] = useState<WeakTopic[]>([])
   const [targeted, setTargeted] = useState<FocusedCourse[]>([])
@@ -65,8 +71,8 @@ export default function ResultPage() {
     const fetchResult = async () => {
       try {
         const [resultRes, recRes] = await Promise.all([
-          fetch('/api/assessment/result'),
-          fetch('/api/recommendations'),
+          fetch(`/api/assessment/result?subject=${subject}`),
+          fetch(`/api/recommendations?subject=${subject}`),
         ])
         if (resultRes.ok) setResult(await resultRes.json())
         if (recRes.ok) {
@@ -82,7 +88,7 @@ export default function ResultPage() {
     }
 
     fetchResult()
-  }, [])
+  }, [subject])
 
   if (loading) {
     return (
@@ -113,7 +119,8 @@ export default function ResultPage() {
     )
   }
 
-  const levelIndex = CEFR_LEVELS.indexOf(result.cefrLevel)
+  const levels = definition.levels
+  const levelIndex = levels.indexOf(result.cefrLevel)
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -132,10 +139,10 @@ export default function ResultPage() {
                 </span>
                 <div className="pb-2">
                   <p className="text-base font-medium text-slate-900">
-                    {CEFR_DESCRIPTIONS[result.cefrLevel]}
+                    {definition.name} — {describeLevel(subject, result.cefrLevel)}
                   </p>
                   <p className="mt-1 text-sm text-slate-500">
-                    อ้างอิงกรอบมาตรฐาน CEFR
+                    อ้างอิง{definition.framework}
                   </p>
                 </div>
               </div>
@@ -166,7 +173,7 @@ export default function ResultPage() {
             <div className="card p-6">
               <p className="rule-label mb-5">ตำแหน่งบนกรอบระดับ CEFR</p>
               <div className="flex items-end gap-2">
-                {CEFR_LEVELS.map((level, index) => {
+                {levels.map((level, index) => {
                   const reached = index <= levelIndex
                   return (
                     <div key={level} className="flex flex-1 flex-col items-center gap-2">
@@ -416,5 +423,21 @@ export default function ResultPage() {
 
       <SiteFooter />
     </div>
+  )
+}
+
+// useSearchParams ต้องอยู่ใต้ Suspense
+export default function ResultPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50">
+          <SiteHeader />
+          <LoadingScreen label="กำลังประมวลผลการประเมินของคุณ..." />
+        </div>
+      }
+    >
+      <ResultReport />
+    </Suspense>
   )
 }

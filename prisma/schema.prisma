@@ -22,6 +22,7 @@ model User {
   updatedAt             DateTime    @updatedAt
 
   assessmentHistory     AssessmentRecord[]
+  subjectProgress       SubjectProgress[]
   enrolledCourses       CourseEnrollment[]
   createdCourses        Course[]      @relation("CreatedBy")
   uploadedVideos        Video[]       @relation("UploadedBy")
@@ -32,14 +33,18 @@ model User {
 
 model Question {
   id                    String      @id @default(cuid())
+  // วิชา: english (CEFR A1–C2), math (PISA M1–M6), science (PISA S1–S6)
+  subject               String      @default("english")
   // บทความสั้นสำหรับข้อสอบหมวด reading — ข้อสอบหมวดอื่นเป็น null
   passage               String?     @db.LongText
   question              String      @db.LongText
   options               Json        // [{text: string, isCorrect: boolean}]
   correctAnswer         String
   explanation           String      @db.LongText
-  difficulty            Int         @default(1) // 1-10, affects CEFR level assignment
-  cefrLevel             String      // A1, A2, B1, B2, C1, C2
+  difficulty            Int         @default(1) // 1-10, affects level assignment
+  // ระดับตามเกณฑ์ของวิชานั้น — ชื่อคอลัมน์ยังเป็น cefrLevel เพราะระบบเดิมอ้างอิงอยู่หลายจุด
+  // english = A1–C2, math = M1–M6, science = S1–S6
+  cefrLevel             String
   category              String      @default("general") // grammar, vocabulary, reading, listening
   // หัวข้อที่ข้อนี้วัด (เช่น past-simple, conditionals) — ใช้จับคู่ข้อที่ตอบผิดกับคอร์สที่สอนเรื่องนั้น
   topic                 String?
@@ -50,6 +55,25 @@ model Question {
   @@index([cefrLevel])
   @@index([category])
   @@index([topic])
+  @@index([subject])
+}
+
+// ระดับของผู้เรียนแยกตามวิชา
+// User.currentLevel เก็บระดับภาษาอังกฤษไว้เหมือนเดิม เพื่อไม่ให้เส้นทางที่ใช้งานอยู่พัง
+// ส่วนวิชาอื่นเก็บที่นี่ หนึ่งแถวต่อผู้เรียนต่อวิชา
+model SubjectProgress {
+  id                    String      @id @default(cuid())
+  userId                String
+  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject               String      // math, science
+  currentLevel          String      // M1–M6 หรือ S1–S6
+  correctAnswers        Int         @default(0)
+  wrongAnswers          Int         @default(0)
+  assessmentStartedAt   DateTime?   // จุดเริ่มของความพยายามครั้งปัจจุบัน
+  updatedAt             DateTime    @updatedAt
+
+  @@unique([userId, subject])
+  @@index([subject])
 }
 
 model AssessmentRecord {
@@ -95,9 +119,12 @@ model Video {
 
 model Course {
   id                    String      @id @default(cuid())
+  // วิชาของคอร์ส — english, math, science
+  subject               String      @default("english")
   title                 String
   description           String      @db.LongText
-  minCefrLevel          String      // Minimum CEFR level required (A1, A2, B1, B2, C1, C2)
+  // ระดับขั้นต่ำตามเกณฑ์ของวิชานั้น (english A1–C2, math M1–M6, science S1–S6)
+  minCefrLevel          String
   maxCefrLevel          String?     // Maximum CEFR level (if null, suitable for all higher levels)
   instructorName        String?
   createdById           String

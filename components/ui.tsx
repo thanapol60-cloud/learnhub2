@@ -2,14 +2,24 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 
 /** Muted, print-like tints so six levels read as one family. */
-export const CEFR_BADGE: Record<string, string> = {
-  A1: 'bg-slate-100 text-slate-700 ring-slate-200',
-  A2: 'bg-sky-50 text-sky-800 ring-sky-200',
-  B1: 'bg-teal-50 text-teal-800 ring-teal-200',
-  B2: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
-  C1: 'bg-amber-50 text-amber-800 ring-amber-200',
-  C2: 'bg-rose-50 text-rose-800 ring-rose-200',
-}
+// ระดับที่ 1–6 ของทุกวิชาใช้ชุดสีเดียวกัน ผู้เรียนจึงอ่านความสูงต่ำได้เหมือนกันหมด
+const TIER_BADGE = [
+  'bg-slate-100 text-slate-700 ring-slate-200',
+  'bg-sky-50 text-sky-800 ring-sky-200',
+  'bg-teal-50 text-teal-800 ring-teal-200',
+  'bg-emerald-50 text-emerald-800 ring-emerald-200',
+  'bg-amber-50 text-amber-800 ring-amber-200',
+  'bg-rose-50 text-rose-800 ring-rose-200',
+]
+
+const LEVEL_ORDER = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
+
+export const CEFR_BADGE: Record<string, string> = Object.fromEntries([
+  ...LEVEL_ORDER.map((level, i) => [level, TIER_BADGE[i]]),
+  ...['M', 'S'].flatMap((prefix) =>
+    TIER_BADGE.map((style, i) => [`${prefix}${i + 1}`, style])
+  ),
+])
 
 export function CefrBadge({
   level,

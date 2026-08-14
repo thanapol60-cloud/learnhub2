@@ -36,7 +36,10 @@ learnhub2/
 ├── prisma/
 │   └── schema.prisma         # Database schema
 ├── scripts/
-│   └── seed.ts              # Database seeding script
+│   ├── seed.ts              # Database seeding script
+│   ├── seed-math.mjs        # คลังข้อสอบคณิตศาสตร์ M1–M6
+│   ├── seed-science.mjs     # คลังข้อสอบวิทยาศาสตร์ S1–S6
+│   └── seed-stem-courses.mjs # คอร์สคณิต/วิทย์ พร้อมตรวจว่าครอบคลุมทุกหัวข้อ
 ├── package.json
 ├── tsconfig.json
 ├── tailwind.config.ts
@@ -54,18 +57,28 @@ learnhub2/
 - Role-based access control
 - Session management with HTTP-only cookies (`userId`, `userRole`)
 
-### 2. Adaptive Assessment (User Feature)
+### 2. Multi-Subject Assessment
+- Three subjects, each with its own six-level scale (`lib/subjects.ts`)
+  - **ภาษาอังกฤษ** — CEFR A1–C2
+  - **คณิตศาสตร์** — M1–M6, criteria modelled on the six PISA Mathematics Literacy levels
+  - **วิทยาศาสตร์** — S1–S6, criteria modelled on the six PISA Science Literacy levels
+- All questions are written for this platform against the published level descriptors; none are copied from commercial exam banks
+- English progress stays in `User.currentLevel`; other subjects live in `SubjectProgress` (one row per learner per subject)
+- The same adaptive engine, topic tagging, and course recommendation apply to every subject
+- Pass `?subject=` to `/api/question`, `/api/assessment/result`, `/api/recommendations`; omitting it means English, so existing links keep working
+
+### 3. Adaptive Assessment (User Feature)
 - Dynamic difficulty adjustment based on user performance
 - Automatic level advancement when user reaches 80% accuracy
 - Level demotion when accuracy drops below 50%
 - Prevents level skipping - users must master current level first
 
-### 3. CEFR Level Evaluation
+### 4. Level Evaluation
 - 6 proficiency levels: A1, A2, B1, B2, C1, C2
 - Final assessment based on overall accuracy score
 - Color-coded visual representation of levels
 
-### 4. Course Recommendations
+### 5. Course Recommendations
 - Personalized course suggestions based on assessed level
 - Courses include learning outcomes and duration
 - Instructor information and detailed descriptions

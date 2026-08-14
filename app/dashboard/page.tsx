@@ -5,9 +5,18 @@ import Link from 'next/link'
 import { CEFR_DESCRIPTIONS, CEFR_LEVELS, CEFRLevel } from '@/lib/cefr'
 import { SiteHeader } from '@/components/site-header'
 import { SiteFooter } from '@/components/site-footer'
-import { EmptyState, LoadingScreen, PageHeader, StatCard } from '@/components/ui'
+import { CefrBadge, EmptyState, LoadingScreen, PageHeader, StatCard } from '@/components/ui'
+import { describeLevel, SUBJECTS, SUBJECT_KEYS } from '@/lib/subjects'
 import { IconArrowRight, IconChart, IconTarget } from '@/components/icons'
 import { formatTHB, statusLabel, statusStyle } from '@/lib/enrollment-status'
+
+interface SubjectSummary {
+  subject: string
+  currentLevel: string
+  answered: number
+  accuracy: number
+  started: boolean
+}
 
 interface DashboardData {
   currentLevel: CEFRLevel
@@ -18,6 +27,7 @@ interface DashboardData {
     accuracy: number
     level: string
   }
+  subjects?: SubjectSummary[]
 }
 
 interface Enrollment {
@@ -101,7 +111,7 @@ export default function DashboardPage() {
                 <div className="relative grid gap-8 p-8 lg:grid-cols-[auto_1fr] lg:items-center">
                   <div>
                     <p className="text-[11px] uppercase tracking-[0.16em] text-white/55">
-                      ระดับปัจจุบัน
+                      ระดับภาษาอังกฤษปัจจุบัน
                     </p>
                     <p className="mt-2 text-5xl font-semibold tracking-tight text-white">
                       {data.currentLevel}
@@ -152,6 +162,58 @@ export default function DashboardPage() {
                 hint="ความแม่นยำสูงสุดที่ทำได้"
                 icon={<IconChart className="h-5 w-5" />}
               />
+            </section>
+
+            {/* ระดับแยกตามวิชา */}
+            <section className="card overflow-hidden">
+              <h2 className="border-b border-slate-200 px-6 py-4 text-sm font-semibold text-slate-900">
+                ระดับรายวิชา
+              </h2>
+              <div className="grid gap-px bg-slate-200 md:grid-cols-3">
+                {SUBJECT_KEYS.map((key) => {
+                  const summary = data.subjects?.find((s) => s.subject === key)
+                  const definition = SUBJECTS[key]
+                  const started = summary?.started ?? false
+                  const level = summary?.currentLevel ?? definition.levels[0]
+
+                  return (
+                    <div key={key} className="flex flex-col bg-white p-6">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-slate-900">
+                          {definition.name}
+                        </h3>
+                        {started ? (
+                          <CefrBadge level={level} />
+                        ) : (
+                          <span className="text-xs text-slate-400">ยังไม่ได้ประเมิน</span>
+                        )}
+                      </div>
+
+                      {started ? (
+                        <>
+                          <p className="mt-3 text-sm leading-snug text-slate-600">
+                            {describeLevel(key, level)}
+                          </p>
+                          <p className="mt-3 text-xs text-slate-500">
+                            ทำแล้ว {summary?.answered} ข้อ · ความแม่นยำ {summary?.accuracy}%
+                          </p>
+                        </>
+                      ) : (
+                        <p className="mt-3 text-sm leading-snug text-slate-500">
+                          {definition.framework}
+                        </p>
+                      )}
+
+                      <Link
+                        href={`/assessment?subject=${key}`}
+                        className="btn btn-secondary btn-sm mt-5 w-full"
+                      >
+                        {started ? 'ประเมินอีกครั้ง' : 'เริ่มประเมิน'}
+                      </Link>
+                    </div>
+                  )
+                })}
+              </div>
             </section>
 
             {/* Recent assessment */}

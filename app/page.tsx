@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { SiteHeader } from '@/components/site-header'
 import { SiteFooter } from '@/components/site-footer'
 import { CEFR_LEVELS, CEFR_DESCRIPTIONS } from '@/lib/cefr'
+import { SUBJECTS, SUBJECT_KEYS, SubjectKey } from '@/lib/subjects'
 import { CefrBadge, Spinner } from '@/components/ui'
 import {
   IconArrowRight,
@@ -61,22 +62,24 @@ const FEATURES = [
 ]
 
 export default function Home() {
-  const [isLoading, setIsLoading] = useState(false)
+  // เก็บเป็นชื่อวิชาที่กำลังโหลด เพื่อให้ปุ่มของวิชาอื่นยังกดได้ระหว่างรอ
+  const [startingSubject, setStartingSubject] = useState<SubjectKey | null>(null)
 
-  const handleStartAssessment = async () => {
-    setIsLoading(true)
+  const handleStartAssessment = async (subject: SubjectKey = 'english') => {
+    setStartingSubject(subject)
     try {
       const response = await fetch('/api/assessment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject }),
       })
       if (response.ok) {
-        window.location.href = '/assessment'
+        window.location.href = `/assessment?subject=${subject}`
       }
     } catch (error) {
       console.error('Failed to start assessment:', error)
     } finally {
-      setIsLoading(false)
+      setStartingSubject(null)
     }
   }
 
@@ -109,11 +112,11 @@ export default function Home() {
 
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <button
-                onClick={handleStartAssessment}
-                disabled={isLoading}
+                onClick={() => handleStartAssessment('english')}
+                disabled={startingSubject !== null}
                 className="btn btn-lg btn-inverse"
               >
-                {isLoading ? (
+                {startingSubject === 'english' ? (
                   <>
                     <Spinner className="h-4 w-4 border-slate-300 border-t-brand-800" />
                     กำลังเตรียมข้อสอบ...
@@ -175,6 +178,70 @@ export default function Home() {
                 ))}
               </ul>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Subjects — ทางเข้าแบบประเมินของแต่ละวิชา */}
+      <section className="border-b border-slate-200 bg-white py-20">
+        <div className="container-page">
+          <p className="eyebrow">วิชาที่เปิดประเมิน</p>
+          <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight">
+            เลือกวิชาที่ต้องการวัดระดับ
+          </h2>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600">
+            แต่ละวิชามีเกณฑ์การวัดระดับของตัวเอง 6 ระดับเท่ากัน
+            ข้อสอบปรับความยากตามคำตอบของคุณ และรายงานผลจะชี้จุดที่ควรซ่อมพร้อมคอร์สที่ตรงหัวข้อ
+          </p>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            {SUBJECT_KEYS.map((key) => {
+              const subject = SUBJECTS[key]
+              const first = subject.levels[0]
+              const last = subject.levels[subject.levels.length - 1]
+              return (
+                <div key={key} className="card flex flex-col p-7">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">{subject.name}</h3>
+                    <CefrBadge level={first} />
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">
+                    {subject.framework}
+                  </p>
+
+                  <ul className="mt-5 flex-1 space-y-2 border-t border-slate-200 pt-5">
+                    {subject.levels.map((level) => (
+                      <li key={level} className="flex gap-3 text-sm">
+                        <span className="w-7 shrink-0 font-semibold tabular-nums text-slate-900">
+                          {level}
+                        </span>
+                        <span className="leading-snug text-slate-600">
+                          {subject.levelDescriptions[level]}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <button
+                    onClick={() => handleStartAssessment(key)}
+                    disabled={startingSubject !== null}
+                    className="btn btn-primary mt-6 w-full"
+                  >
+                    {startingSubject === key ? (
+                      <>
+                        <Spinner className="h-4 w-4 border-white/30 border-t-white" />
+                        กำลังเตรียมข้อสอบ...
+                      </>
+                    ) : (
+                      <>
+                        เริ่มประเมิน{subject.shortName} ({first}–{last})
+                        <IconArrowRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              )
+            })}
           </div>
         </div>
       </section>
@@ -279,12 +346,12 @@ export default function Home() {
             </p>
           </div>
           <button
-            onClick={handleStartAssessment}
-            disabled={isLoading}
+            onClick={() => handleStartAssessment('english')}
+            disabled={startingSubject !== null}
             className="btn btn-lg btn-inverse shrink-0"
           >
-            {isLoading ? 'กำลังเตรียมข้อสอบ...' : 'เริ่มการประเมิน'}
-            {!isLoading && <IconArrowRight className="h-4 w-4" />}
+            {startingSubject === 'english' ? 'กำลังเตรียมข้อสอบ...' : 'เริ่มการประเมิน'}
+            {startingSubject !== 'english' && <IconArrowRight className="h-4 w-4" />}
           </button>
         </div>
       </section>

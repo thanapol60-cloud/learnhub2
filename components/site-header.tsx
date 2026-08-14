@@ -64,7 +64,7 @@ export function SiteHeader() {
               LearnHub
             </span>
             <span className="hidden text-[11px] uppercase tracking-[0.14em] text-slate-500 sm:block">
-              English Proficiency Assessment
+              Adaptive Proficiency Assessment
             </span>
           </span>
         </Link>

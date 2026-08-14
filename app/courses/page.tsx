@@ -6,12 +6,13 @@ import { SiteHeader } from '@/components/site-header'
 import { SiteFooter } from '@/components/site-footer'
 import { CefrBadge, EmptyState, PageHeader, Spinner } from '@/components/ui'
 import { IconCheck, IconClock, IconUser } from '@/components/icons'
-import { CEFR_LEVELS } from '@/lib/cefr'
+import { SUBJECTS, SUBJECT_KEYS, SubjectKey } from '@/lib/subjects'
 import { formatTHB } from '@/lib/enrollment-status'
 import { topicLabel } from '@/lib/topics'
 
 interface Course {
   id: string
+  subject?: string
   title: string
   description: string
   minCefrLevel: string
@@ -28,6 +29,7 @@ export default function CoursesPage() {
   const [loading, setLoading] = useState(true)
   const [filterLevel, setFilterLevel] = useState<string | null>(null)
   const [filterKind, setFilterKind] = useState<'all' | 'focused' | 'level'>('all')
+  const [filterSubject, setFilterSubject] = useState<SubjectKey | 'all'>('all')
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -47,7 +49,14 @@ export default function CoursesPage() {
     fetchCourses()
   }, [])
 
+  // ระดับที่เลือกได้ขึ้นกับวิชา เพราะแต่ละวิชามีบันไดระดับของตัวเอง
+  const levelOptions =
+    filterSubject === 'all'
+      ? SUBJECT_KEYS.flatMap((key) => SUBJECTS[key].levels)
+      : SUBJECTS[filterSubject].levels
+
   const filteredCourses = courses.filter((course) => {
+    if (filterSubject !== 'all' && (course.subject ?? 'english') !== filterSubject) return false
     if (filterLevel && course.minCefrLevel !== filterLevel) return false
     if (filterKind === 'focused' && !course.isFocused) return false
     if (filterKind === 'level' && course.isFocused) return false
@@ -62,7 +71,7 @@ export default function CoursesPage() {
         <PageHeader
           eyebrow="หลักสูตร"
           title="คอร์สเรียนทั้งหมด"
-          description="คอร์สทุกรายการระบุระดับ CEFR ขั้นต่ำที่แนะนำ เพื่อให้เลือกเรียนได้ตรงกับความสามารถปัจจุบัน"
+          description="คอร์สทุกรายการระบุวิชาและระดับขั้นต่ำที่แนะนำ เพื่อให้เลือกเรียนได้ตรงกับความสามารถปัจจุบัน"
           actions={
             <Link href="/" className="btn btn-secondary btn-sm">
               ประเมินระดับของฉัน
@@ -72,6 +81,31 @@ export default function CoursesPage() {
 
         {/* Filters */}
         <div className="mt-8 flex flex-wrap items-center gap-2">
+          <span className="mr-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            วิชา
+          </span>
+          {[{ key: 'all' as const, label: 'ทุกวิชา' }, ...SUBJECT_KEYS.map((key) => ({ key, label: SUBJECTS[key].name }))].map(
+            (item) => (
+              <button
+                key={item.key}
+                onClick={() => {
+                  setFilterSubject(item.key)
+                  // ระดับของวิชาเดิมใช้กับวิชาใหม่ไม่ได้ จึงต้องล้างทิ้ง
+                  setFilterLevel(null)
+                }}
+                className={`rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                  filterSubject === item.key
+                    ? 'border-brand-800 bg-brand-800 text-white'
+                    : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
+                }`}
+              >
+                {item.label}
+              </button>
+            )
+          )}
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="mr-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
             ประเภท
           </span>
@@ -108,7 +142,7 @@ export default function CoursesPage() {
           >
             ทั้งหมด
           </button>
-          {CEFR_LEVELS.map((level) => (
+          {levelOptions.map((level) => (
             <button
               key={level}
               onClick={() => setFilterLevel(level)}

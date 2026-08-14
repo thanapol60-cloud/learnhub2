@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { getNextLevel, demoteLevel } from '@/lib/assessment'
-import { CEFRLevel } from '@/lib/cefr'
 import { getUser } from '@/lib/auth-middleware'
+import { isSubjectKey, SubjectKey } from '@/lib/subjects'
+import {
+  getProgress,
+  nextLevelOf,
+  previousLevelOf,
+  recordAnswer,
+  setLevel,
+} from '@/lib/subject-progress'
 
 const CORRECT_STREAK_TO_ADVANCE = 3
 const WRONG_STREAK_TO_DEMOTE = 2
@@ -22,21 +28,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const [record, question] = await Promise.all([
-      prisma.user.findUnique({ where: { id: user.id } }),
-      prisma.question.findUnique({ where: { id: questionId } }),
-    ])
-
-    if (!record) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
+    const question = await prisma.question.findUnique({ where: { id: questionId } })
     if (!question) {
       return NextResponse.json({ error: 'Question not found' }, { status: 404 })
     }
 
+    // วิชามาจากตัวข้อสอบเอง ไม่ใช่จากไคลเอนต์ จึงสลับวิชากลางคันไม่ได้
+    const subject: SubjectKey = isSubjectKey(question.subject) ? question.subject : 'english'
+
+    const progress = await getProgress(user.id, subject)
+    if (!progress) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
     // Graded server-side: a client-supplied verdict could simply claim success
     const isCorrect = userAnswer === question.correctAnswer
-    const levelAtAnswer = record.currentLevel as CEFRLevel
+    const levelAtAnswer = progress.currentLevel
 
     await prisma.assessmentRecord.create({
       data: {
@@ -48,23 +55,20 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: isCorrect
-        ? { correctAnswers: { increment: 1 } }
-        : { wrongAnswers: { increment: 1 } },
-    })
+    await recordAnswer(user.id, subject, isCorrect)
 
     // Walk back over the whole attempt rather than filtering by level: stopping
     // at the first record from a different level confines the streak to the
     // current stay at this level. Filtering by level instead would let older
     // answers from an earlier visit count, so one correct answer after a
     // demotion would bounce the learner straight back up.
+    // จำกัดเฉพาะข้อของวิชานี้ ไม่ให้การสอบวิชาอื่นมาตัดสตรีค
     const recent = await prisma.assessmentRecord.findMany({
       where: {
         userId: user.id,
-        ...(record.assessmentStartedAt
-          ? { createdAt: { gte: record.assessmentStartedAt } }
+        question: { subject },
+        ...(progress.assessmentStartedAt
+          ? { createdAt: { gte: progress.assessmentStartedAt } }
           : {}),
       },
       orderBy: { createdAt: 'desc' },
@@ -83,13 +87,13 @@ export async function POST(request: NextRequest) {
     let levelChange: 'up' | 'down' | null = null
 
     if (isCorrect && streak >= CORRECT_STREAK_TO_ADVANCE) {
-      const next = getNextLevel(levelAtAnswer)
+      const next = nextLevelOf(subject, levelAtAnswer)
       if (next) {
         newLevel = next
         levelChange = 'up'
       }
     } else if (!isCorrect && streak >= WRONG_STREAK_TO_DEMOTE) {
-      const previous = demoteLevel(levelAtAnswer)
+      const previous = previousLevelOf(subject, levelAtAnswer)
       if (previous !== levelAtAnswer) {
         newLevel = previous
         levelChange = 'down'
@@ -97,20 +101,18 @@ export async function POST(request: NextRequest) {
     }
 
     if (newLevel !== levelAtAnswer) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { currentLevel: newLevel },
-      })
+      await setLevel(user.id, subject, newLevel)
     }
 
-    const correctAnswers = record.correctAnswers + (isCorrect ? 1 : 0)
-    const wrongAnswers = record.wrongAnswers + (isCorrect ? 0 : 1)
+    const correctAnswers = progress.correctAnswers + (isCorrect ? 1 : 0)
+    const wrongAnswers = progress.wrongAnswers + (isCorrect ? 0 : 1)
     const totalAnswered = correctAnswers + wrongAnswers
 
     return NextResponse.json({
       isCorrect,
       correctAnswer: question.correctAnswer,
       explanation: question.explanation,
+      subject,
       newLevel,
       levelChange,
       streak,

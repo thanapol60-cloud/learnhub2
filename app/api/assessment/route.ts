@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
 import { getUser } from '@/lib/auth-middleware'
+import { isSubjectKey, SUBJECTS } from '@/lib/subjects'
+import { startAttempt } from '@/lib/subject-progress'
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,22 +14,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Reset counters so each assessment starts from a clean slate at A1.
-    // assessmentStartedAt separates this attempt's answers from earlier ones,
-    // which is what keeps already-answered questions from reappearing.
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        currentLevel: 'A1',
-        correctAnswers: 0,
-        wrongAnswers: 0,
-        assessmentCompleted: false,
-        assessmentStartedAt: new Date(),
-      },
-    })
+    // ไม่ส่ง subject มาถือว่าเป็นภาษาอังกฤษ เพื่อให้ไคลเอนต์เดิมยังทำงานได้
+    const body = await request.json().catch(() => ({}))
+    const subject = body?.subject ?? 'english'
+    if (!isSubjectKey(subject)) {
+      return NextResponse.json({ error: 'ไม่รู้จักวิชานี้' }, { status: 400 })
+    }
+
+    // ล้างสถิติของวิชานั้นให้เริ่มจากระดับแรกใหม่
+    // assessmentStartedAt เป็นตัวแบ่งว่าคำตอบไหนอยู่ในรอบนี้ จึงกันข้อซ้ำได้
+    await startAttempt(user.id, subject)
 
     return NextResponse.json({
       userId: user.id,
+      subject,
+      startLevel: SUBJECTS[subject].levels[0],
       message: 'Assessment started',
     })
   } catch (error) {

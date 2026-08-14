@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { Suspense, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { CEFRLevel, CEFR_DESCRIPTIONS } from '@/lib/cefr'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { describeLevel, isSubjectKey, SUBJECTS, SubjectKey } from '@/lib/subjects'
 import { BrandMark } from '@/components/brand-mark'
 import { CefrBadge, Spinner } from '@/components/ui'
 import { IconArrowRight, IconCheck, IconClose } from '@/components/icons'
@@ -25,7 +25,7 @@ interface AnswerResult {
   isCorrect: boolean
   correctAnswer: string
   explanation: string
-  newLevel: CEFRLevel
+  newLevel: string
   levelChange: 'up' | 'down' | null
   totalAnswered: number
   correctAnswers: number
@@ -36,11 +36,13 @@ function ExamHeader({
   answered,
   correct,
   showing,
+  subjectName,
 }: {
-  level: CEFRLevel
+  level: string
   answered: number
   correct: number
   showing: number
+  subjectName: string
 }) {
   const progress = Math.min((answered / TOTAL_QUESTIONS) * 100, 100)
 
@@ -50,7 +52,7 @@ function ExamHeader({
         <Link href="/" className="flex items-center gap-3">
           <BrandMark className="h-8 w-8" />
           <span className="hidden text-sm font-semibold tracking-tight text-slate-900 sm:block">
-            แบบประเมินระดับภาษาอังกฤษ
+            แบบประเมินระดับ{subjectName}
           </span>
         </Link>
 
@@ -92,11 +94,17 @@ function ExamHeader({
   )
 }
 
-export default function AssessmentPage() {
+function AssessmentRunner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  // ไม่ระบุวิชาถือว่าเป็นภาษาอังกฤษ ลิงก์เดิมจึงยังใช้ได้
+  const subjectParam = searchParams.get('subject')
+  const subject: SubjectKey = isSubjectKey(subjectParam) ? subjectParam : 'english'
+  const definition = SUBJECTS[subject]
+
   const [loading, setLoading] = useState(true)
   const [question, setQuestion] = useState<Question | null>(null)
-  const [currentLevel, setCurrentLevel] = useState<CEFRLevel>('A1')
+  const [currentLevel, setCurrentLevel] = useState<string>(definition.levels[0])
   const [selected, setSelected] = useState<string | null>(null)
   const [result, setResult] = useState<AnswerResult | null>(null)
   const [answered, setAnswered] = useState(0)
@@ -108,7 +116,7 @@ export default function AssessmentPage() {
     setLoading(true)
     setError(null)
     try {
-      const response = await fetch('/api/question')
+      const response = await fetch(`/api/question?subject=${subject}`)
       const data = await response.json()
 
       if (!response.ok) {
@@ -128,7 +136,7 @@ export default function AssessmentPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [subject])
 
   useEffect(() => {
     loadQuestion()
@@ -163,7 +171,7 @@ export default function AssessmentPage() {
 
   const goNext = () => {
     if (answered >= TOTAL_QUESTIONS) {
-      router.push('/result')
+      router.push(`/result?subject=${subject}`)
     } else {
       loadQuestion()
     }
@@ -195,7 +203,7 @@ export default function AssessmentPage() {
           <div className="mt-6 space-y-3">
             {answered > 0 && (
               <button
-                onClick={() => router.push('/result')}
+                onClick={() => router.push(`/result?subject=${subject}`)}
                 className="btn btn-primary w-full"
               >
                 ดูผลประเมินจาก {answered} ข้อที่ทำแล้ว
@@ -222,6 +230,7 @@ export default function AssessmentPage() {
         answered={answered}
         correct={correct}
         showing={showing}
+        subjectName={definition.name}
       />
 
       <main className="container-narrow py-10 sm:py-14">
@@ -375,9 +384,27 @@ export default function AssessmentPage() {
         )}
 
         <p className="mt-6 text-center text-xs text-slate-500">
-          ระดับที่ประเมินได้ขณะนี้: {CEFR_DESCRIPTIONS[currentLevel]}
+          ระดับที่ประเมินได้ขณะนี้: {currentLevel} — {describeLevel(subject, currentLevel)}
+        </p>
+        <p className="mt-1 text-center text-[11px] text-slate-400">
+          เกณฑ์: {definition.framework}
         </p>
       </main>
     </div>
+  )
+}
+
+// useSearchParams ต้องอยู่ใต้ Suspense ไม่งั้น Next.js จะบังคับให้ทั้งหน้าเรนเดอร์ฝั่งไคลเอนต์
+export default function AssessmentPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-slate-50">
+          <Spinner className="h-8 w-8" />
+        </div>
+      }
+    >
+      <AssessmentRunner />
+    </Suspense>
   )
 }

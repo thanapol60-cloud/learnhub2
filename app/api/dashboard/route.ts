@@ -44,11 +44,48 @@ export async function GET(request: NextRequest) {
         }
       : undefined
 
+    // ระดับของทุกวิชา — ภาษาอังกฤษอยู่ในตาราง User ส่วนวิชาอื่นอยู่ใน SubjectProgress
+    const otherSubjects = await prisma.subjectProgress.findMany({
+      where: { userId },
+      select: {
+        subject: true,
+        currentLevel: true,
+        correctAnswers: true,
+        wrongAnswers: true,
+        updatedAt: true,
+      },
+    })
+
+    const subjects = [
+      {
+        subject: 'english',
+        currentLevel: user.currentLevel,
+        correctAnswers: user.correctAnswers,
+        wrongAnswers: user.wrongAnswers,
+        answered: totalAnswers,
+        accuracy,
+        started: totalAnswers > 0,
+      },
+      ...otherSubjects.map((row) => {
+        const answered = row.correctAnswers + row.wrongAnswers
+        return {
+          subject: row.subject,
+          currentLevel: row.currentLevel,
+          correctAnswers: row.correctAnswers,
+          wrongAnswers: row.wrongAnswers,
+          answered,
+          accuracy: answered > 0 ? Math.round((row.correctAnswers / answered) * 100) : 0,
+          started: answered > 0,
+        }
+      }),
+    ]
+
     return NextResponse.json({
       currentLevel: user.currentLevel,
       totalAssessments: user.assessmentHistory.length > 0 ? 1 : 0,
       bestScore: accuracy,
       recentAssessment,
+      subjects,
     })
   } catch (error) {
     console.error('Failed to get dashboard:', error)

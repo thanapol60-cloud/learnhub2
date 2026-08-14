@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { AdminShell } from '@/components/admin-shell'
 import { CefrBadge, EmptyState, Spinner } from '@/components/ui'
 import { IconClock, IconPlus, IconVideo } from '@/components/icons'
-import { CEFR_LEVELS } from '@/lib/cefr'
+import { isSubjectKey, SUBJECTS, SUBJECT_KEYS, SubjectKey } from '@/lib/subjects'
 import { formatTHB } from '@/lib/enrollment-status'
 
 interface CourseVideo {
@@ -42,6 +42,7 @@ export default function AdminCoursesPage() {
   const [loading, setLoading] = useState(true)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [formData, setFormData] = useState({
+    subject: 'english' as SubjectKey,
     title: '',
     description: '',
     minCefrLevel: 'B1',
@@ -126,6 +127,7 @@ export default function AdminCoursesPage() {
         setFormData({
           title: '',
           description: '',
+          subject: 'english' as SubjectKey,
           minCefrLevel: 'B1',
           maxCefrLevel: '',
           instructorName: '',
@@ -244,10 +246,39 @@ export default function AdminCoursesPage() {
               />
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className="grid gap-5 sm:grid-cols-3">
+              <div>
+                <label htmlFor="subject" className="label">
+                  วิชา
+                </label>
+                <select
+                  id="subject"
+                  name="subject"
+                  value={formData.subject}
+                  onChange={(event) => {
+                    const next = event.target.value
+                    if (!isSubjectKey(next)) return
+                    // ระดับของวิชาเดิมใช้กับวิชาใหม่ไม่ได้ จึงตั้งกลับไปที่ระดับแรก
+                    setFormData((prev) => ({
+                      ...prev,
+                      subject: next,
+                      minCefrLevel: SUBJECTS[next].levels[0],
+                      maxCefrLevel: '',
+                    }))
+                  }}
+                  className="input"
+                >
+                  {SUBJECT_KEYS.map((key) => (
+                    <option key={key} value={key}>
+                      {SUBJECTS[key].name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label htmlFor="minCefrLevel" className="label">
-                  ระดับ CEFR ต่ำสุด
+                  ระดับต่ำสุด
                 </label>
                 <select
                   id="minCefrLevel"
@@ -256,7 +287,7 @@ export default function AdminCoursesPage() {
                   onChange={handleInputChange}
                   className="input"
                 >
-                  {CEFR_LEVELS.map((level) => (
+                  {SUBJECTS[formData.subject].levels.map((level) => (
                     <option key={level} value={level}>
                       {level}
                     </option>
@@ -266,7 +297,7 @@ export default function AdminCoursesPage() {
 
               <div>
                 <label htmlFor="maxCefrLevel" className="label">
-                  ระดับ CEFR สูงสุด
+                  ระดับสูงสุด
                 </label>
                 <select
                   id="maxCefrLevel"
@@ -276,7 +307,7 @@ export default function AdminCoursesPage() {
                   className="input"
                 >
                   <option value="">ไม่จำกัด</option>
-                  {CEFR_LEVELS.map((level) => (
+                  {SUBJECTS[formData.subject].levels.map((level) => (
                     <option key={level} value={level}>
                       {level}
                     </option>

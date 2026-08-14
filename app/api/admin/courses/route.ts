@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getUser, requireAdmin } from '@/lib/auth-middleware'
+import { isSubjectKey, levelsOf } from '@/lib/subjects'
 
 export async function POST(request: NextRequest) {
   const authError = requireAdmin(request)
@@ -13,6 +14,7 @@ export async function POST(request: NextRequest) {
     }
 
     const {
+      subject,
       title,
       description,
       minCefrLevel,
@@ -31,10 +33,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // ไม่ระบุวิชาถือว่าเป็นภาษาอังกฤษ เพื่อให้ฟอร์มเดิมยังใช้ได้
+    const courseSubject = isSubjectKey(subject) ? subject : 'english'
+    if (!levelsOf(courseSubject).includes(minCefrLevel)) {
+      return NextResponse.json(
+        { error: `ระดับ ${minCefrLevel} ไม่ใช่ระดับของวิชานี้` },
+        { status: 400 }
+      )
+    }
+
     const selectedVideoIds: string[] = Array.isArray(videoIds) ? videoIds : []
 
     const course = await prisma.course.create({
       data: {
+        subject: courseSubject,
         title,
         description,
         minCefrLevel,
