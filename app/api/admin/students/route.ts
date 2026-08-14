@@ -21,6 +21,15 @@ export async function GET(request: NextRequest) {
         correctAnswers: true,
         wrongAnswers: true,
         createdAt: true,
+        // ระดับของวิชาอื่น — ผู้เรียนบางคนสอบเฉพาะคณิตหรือวิทย์ ยังไม่เคยสอบภาษาอังกฤษ
+        subjectProgress: {
+          select: {
+            subject: true,
+            currentLevel: true,
+            correctAnswers: true,
+            wrongAnswers: true,
+          },
+        },
         enrolledCourses: {
           orderBy: { enrolledAt: 'desc' },
           select: {
@@ -34,7 +43,13 @@ export async function GET(request: NextRequest) {
             reviewedAt: true,
             progress: true,
             course: {
-              select: { id: true, title: true, minCefrLevel: true, price: true },
+              select: {
+                id: true,
+                subject: true,
+                title: true,
+                minCefrLevel: true,
+                price: true,
+              },
             },
           },
         },

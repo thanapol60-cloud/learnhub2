@@ -4,8 +4,18 @@ import { useState, useEffect } from 'react'
 import { AdminShell } from '@/components/admin-shell'
 import { EmptyState, Spinner, StatCard } from '@/components/ui'
 import { IconBook, IconChart, IconLayers, IconUsers } from '@/components/icons'
-import { CEFR_LEVELS } from '@/lib/cefr'
 import { CefrDonut } from '@/components/cefr-donut'
+import { SubjectKey } from '@/lib/subjects'
+
+interface SubjectStats {
+  subject: SubjectKey
+  name: string
+  framework: string
+  levels: string[]
+  levelDistribution: Record<string, number>
+  assessed: number
+  averageLevel: string
+}
 
 interface LearnerStats {
   totalUsers: number
@@ -13,11 +23,14 @@ interface LearnerStats {
   assessmentsCompleted: number
   courseEnrollments: number
   levelDistribution: Record<string, number>
+  subjects?: SubjectStats[]
+  enrollmentsBySubject?: Record<string, number>
 }
 
 export default function AdminAnalyticsPage() {
   const [stats, setStats] = useState<LearnerStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [subject, setSubject] = useState<SubjectKey>('english')
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -36,9 +49,11 @@ export default function AdminAnalyticsPage() {
     fetchStats()
   }, [])
 
-  const total = stats
-    ? Object.values(stats.levelDistribution).reduce((a, b) => a + b, 0)
-    : 0
+  const subjects = stats?.subjects ?? []
+  const active = subjects.find((s) => s.subject === subject) ?? subjects[0]
+  const distribution = active?.levelDistribution ?? stats?.levelDistribution ?? {}
+  const levels = active?.levels ?? []
+  const total = Object.values(distribution).reduce((a, b) => a + b, 0)
 
   return (
     <AdminShell
@@ -59,33 +74,68 @@ export default function AdminAnalyticsPage() {
               icon={<IconUsers className="h-5 w-5" />}
             />
             <StatCard
-              label="การประเมินที่เสร็จสิ้น"
-              value={stats.assessmentsCompleted}
+              label={`ประเมินแล้ว (${active?.name ?? ''})`}
+              value={active?.assessed ?? 0}
               icon={<IconChart className="h-5 w-5" />}
             />
             <StatCard
               label="การลงทะเบียนคอร์ส"
               value={stats.courseEnrollments}
+              hint={
+                stats.enrollmentsBySubject
+                  ? `วิชานี้ ${stats.enrollmentsBySubject[subject] ?? 0} รายการ`
+                  : undefined
+              }
               icon={<IconBook className="h-5 w-5" />}
             />
             <StatCard
-              label="ระดับเฉลี่ย"
-              value={stats.averageLevel}
+              label={`ระดับเฉลี่ย (${active?.name ?? ''})`}
+              value={active?.assessed ? active.averageLevel : '—'}
               icon={<IconLayers className="h-5 w-5" />}
             />
           </section>
 
+          {/* เลือกวิชาที่จะดูสถิติ */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="mr-1 text-xs font-semibold uppercase tracking-wider text-slate-500">
+              วิชา
+            </span>
+            {subjects.map((item) => (
+              <button
+                key={item.subject}
+                onClick={() => setSubject(item.subject)}
+                className={`rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                  subject === item.subject
+                    ? 'border-brand-800 bg-brand-800 text-white'
+                    : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
+                }`}
+              >
+                {item.name}
+                <span className="ml-2 text-xs opacity-70">{item.assessed}</span>
+              </button>
+            ))}
+          </div>
+
           <section className="card overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-              <h2 className="text-sm font-semibold text-slate-900">
-                สัดส่วนผู้เรียนตามระดับ CEFR
-              </h2>
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">
+                  สัดส่วนผู้เรียนตามระดับ — {active?.name}
+                </h2>
+                <p className="mt-0.5 text-xs text-slate-500">{active?.framework}</p>
+              </div>
               <span className="text-xs text-slate-500">
                 ชี้หรือคลิกที่ชิ้นส่วนเพื่อดูรายละเอียด
               </span>
             </div>
             <div className="p-6">
-              <CefrDonut distribution={stats.levelDistribution} />
+              {total > 0 ? (
+                <CefrDonut distribution={distribution} levels={levels} />
+              ) : (
+                <p className="py-12 text-center text-sm text-slate-500">
+                  ยังไม่มีผู้เรียนที่ประเมินวิชานี้
+                </p>
+              )}
             </div>
           </section>
 
@@ -95,13 +145,13 @@ export default function AdminAnalyticsPage() {
                 เปรียบเทียบรายระดับ
               </h2>
               <span className="text-xs text-slate-500">
-                ฐานข้อมูล {total} ผู้เรียน
+                {active?.name} · ฐานข้อมูล {total} ผู้เรียน
               </span>
             </div>
 
             <div className="divide-y divide-slate-100">
-              {CEFR_LEVELS.map((level) => {
-                const count = stats.levelDistribution[level] ?? 0
+              {levels.map((level) => {
+                const count = distribution[level] ?? 0
                 const percentage = total > 0 ? (count / total) * 100 : 0
 
                 return (

@@ -70,7 +70,10 @@ async function main() {
   })
   if (removed.count) console.log(`ลบบัญชีเดโม่เดิม ${removed.count} บัญชี`)
 
+  // เฉพาะคอร์สภาษาอังกฤษ — ระดับของวิชาอื่น (M1–M6, S1–S6) ไม่อยู่ใน LEVEL_ORDER
+  // ถ้าไม่กรอง indexOf จะคืน -1 แล้วคอร์สคณิต/วิทย์จะผ่านเงื่อนไขความเหมาะสมของระดับทั้งหมด
   const courses = await prisma.course.findMany({
+    where: { subject: 'english' },
     orderBy: { minCefrLevel: 'asc' },
     select: { id: true, title: true, minCefrLevel: true, price: true },
   })
@@ -79,7 +82,10 @@ async function main() {
     return
   }
 
-  const questions = await prisma.question.findMany({ select: { id: true, cefrLevel: true } })
+  const questions = await prisma.question.findMany({
+    where: { subject: 'english' },
+    select: { id: true, cefrLevel: true },
+  })
   const password = hashPassword(DEMO_PASSWORD)
 
   let index = 0

@@ -39,7 +39,8 @@ learnhub2/
 │   ├── seed.ts              # Database seeding script
 │   ├── seed-math.mjs        # คลังข้อสอบคณิตศาสตร์ M1–M6
 │   ├── seed-science.mjs     # คลังข้อสอบวิทยาศาสตร์ S1–S6
-│   └── seed-stem-courses.mjs # คอร์สคณิต/วิทย์ พร้อมตรวจว่าครอบคลุมทุกหัวข้อ
+│   ├── seed-stem-courses.mjs # คอร์สคณิต/วิทย์ พร้อมตรวจว่าครอบคลุมทุกหัวข้อ
+│   └── seed-stem-students.mjs # ผู้เรียนสายวิทย์-คณิต + เติมระดับให้ผู้เรียนเดิม
 ├── package.json
 ├── tsconfig.json
 ├── tailwind.config.ts
@@ -105,7 +106,8 @@ learnhub2/
 
 ### 8. Learning Analytics Dashboard
 - Track learner statistics
-- View CEFR level distribution
+- Level distribution per subject, switchable by tab (English / Math / Science)
+- Learners are counted in a subject only once they have answered at least one question there
 - Monitor course enrollments
 - Insights and recommendations for admins
 
@@ -118,7 +120,7 @@ learnhub2/
 
 ### 10. Student Roster (Admin)
 - Dedicated console tab listing every learner
-- Shows CEFR level, answer stats, and all enrolled courses per student
+- Shows a level badge per subject the learner has been assessed in, answer stats, and all enrolled courses
 - Payment status, amount, reference and learner note per enrollment
 - Approve/reject payments inline; search and filter by payment state
 

@@ -5,6 +5,7 @@ import { AdminShell } from '@/components/admin-shell'
 import { CefrBadge, EmptyState, Spinner, StatCard } from '@/components/ui'
 import { IconCheck, IconClose, IconUsers } from '@/components/icons'
 import { formatTHB, statusLabel, statusStyle } from '@/lib/enrollment-status'
+import { SUBJECTS, SubjectKey } from '@/lib/subjects'
 
 interface Enrollment {
   id: string
@@ -15,7 +16,20 @@ interface Enrollment {
   paidAt?: string | null
   enrolledAt: string
   reviewedAt?: string | null
-  course: { id: string; title: string; minCefrLevel: string; price: number }
+  course: {
+    id: string
+    subject?: string
+    title: string
+    minCefrLevel: string
+    price: number
+  }
+}
+
+interface SubjectProgress {
+  subject: string
+  currentLevel: string
+  correctAnswers: number
+  wrongAnswers: number
 }
 
 interface Student {
@@ -26,6 +40,7 @@ interface Student {
   correctAnswers: number
   wrongAnswers: number
   createdAt: string
+  subjectProgress?: SubjectProgress[]
   enrolledCourses: Enrollment[]
 }
 
@@ -178,11 +193,36 @@ export default function AdminStudentsPage() {
                         {new Date(student.createdAt).toLocaleDateString('th-TH')}
                       </p>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-xs text-slate-500">
-                        ตอบถูก {student.correctAnswers} / ผิด {student.wrongAnswers}
-                      </span>
-                      <CefrBadge level={student.currentLevel} />
+                    <div className="flex flex-wrap items-center gap-4">
+                      {/* ระดับของทุกวิชาที่เคยสอบ — ผู้เรียนที่ยังไม่เคยตอบข้อไหนเลยจะไม่มีป้าย */}
+                      {[
+                        {
+                          subject: 'english',
+                          currentLevel: student.currentLevel,
+                          correctAnswers: student.correctAnswers,
+                          wrongAnswers: student.wrongAnswers,
+                        },
+                        ...(student.subjectProgress ?? []),
+                      ]
+                        .filter((p) => p.correctAnswers + p.wrongAnswers > 0)
+                        .map((progress) => (
+                          <span
+                            key={progress.subject}
+                            className="flex items-center gap-2 text-xs text-slate-500"
+                          >
+                            {SUBJECTS[progress.subject as SubjectKey]?.shortName ??
+                              progress.subject}
+                            <CefrBadge level={progress.currentLevel} />
+                            <span className="tabular-nums">
+                              {progress.correctAnswers}/
+                              {progress.correctAnswers + progress.wrongAnswers}
+                            </span>
+                          </span>
+                        ))}
+                      {student.correctAnswers + student.wrongAnswers === 0 &&
+                        (student.subjectProgress ?? []).length === 0 && (
+                          <span className="text-xs text-slate-400">ยังไม่ได้ประเมิน</span>
+                        )}
                     </div>
                   </div>
 

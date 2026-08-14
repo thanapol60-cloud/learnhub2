@@ -4,18 +4,13 @@ import { useState } from 'react'
 import { CEFR_LEVELS } from '@/lib/cefr'
 
 /**
- * ระดับ CEFR เป็นสเกลแบบเรียงลำดับ (A1 ต่ำสุด → C2 สูงสุด) ไม่ใช่หมวดที่ไม่มีลำดับ
+ * ระดับความสามารถเป็นสเกลแบบเรียงลำดับ (ขั้นแรกต่ำสุด → ขั้นสุดท้ายสูงสุด) ไม่ใช่หมวดที่ไม่มีลำดับ
  * สีจึงเป็นเฉดเดียวไล่จากอ่อนไปเข้ม ความสว่างลดลงทีละขั้น อ่านเป็น "ความก้าวหน้า" ได้ทันที
  * ตัวอักษรระดับ + จำนวน + เปอร์เซ็นต์กำกับอยู่ในคำอธิบายเสมอ จึงไม่ได้ใช้สีบอกความหมายลำพัง
+ *
+ * ทุกวิชามีหกระดับเท่ากัน จึงใช้ไล่เฉดชุดเดียวกันโดยอ้างอิงตำแหน่งของระดับ ไม่ใช่ชื่อระดับ
  */
-const LEVEL_FILL: Record<string, string> = {
-  A1: '#9dbadd',
-  A2: '#6c95c9',
-  B1: '#4975b1',
-  B2: '#375c95',
-  C1: '#2d4a79',
-  C2: '#1e3252',
-}
+const RAMP = ['#9dbadd', '#6c95c9', '#4975b1', '#375c95', '#2d4a79', '#1e3252']
 
 const SIZE = 260
 const RADIUS = 108
@@ -46,16 +41,19 @@ function arcPath(startAngle: number, endAngle: number, outer: number, inner: num
 
 export function CefrDonut({
   distribution,
+  levels = CEFR_LEVELS as unknown as string[],
 }: {
   distribution: Record<string, number>
+  /** ระดับของวิชาที่กำลังแสดง เรียงจากต่ำไปสูง */
+  levels?: string[]
 }) {
   const [active, setActive] = useState<string | null>(null)
   const [pinned, setPinned] = useState<string | null>(null)
 
-  const slices = CEFR_LEVELS.map((level) => ({
+  const slices = levels.map((level, index) => ({
     level,
     count: distribution[level] ?? 0,
-    fill: LEVEL_FILL[level],
+    fill: RAMP[index % RAMP.length],
   }))
   const total = slices.reduce((sum, slice) => sum + slice.count, 0)
   const shown = active ?? pinned
