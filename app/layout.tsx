@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { IBM_Plex_Sans_Thai, Inter } from 'next/font/google'
 import './globals.css'
+import { ChatWidget } from '@/components/chat-widget'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -17,11 +18,11 @@ const plexThai = IBM_Plex_Sans_Thai({
 
 export const metadata: Metadata = {
   title: {
-    default: 'LearnHub — การประเมินระดับภาษาอังกฤษตามมาตรฐาน CEFR',
+    default: 'LearnHub — วัดระดับภาษาอังกฤษ คณิตศาสตร์ และวิทยาศาสตร์',
     template: '%s · LearnHub',
   },
   description:
-    'แพลตฟอร์มประเมินระดับภาษาอังกฤษแบบปรับระดับอัตโนมัติ ประเมินผลตามกรอบมาตรฐาน CEFR (A1–C2) พร้อมคำแนะนำคอร์สเรียนที่ตรงกับระดับของผู้เรียน',
+    'แพลตฟอร์มวัดระดับแบบปรับความยากอัตโนมัติ 3 วิชา ภาษาอังกฤษตามกรอบ CEFR คณิตศาสตร์และวิทยาศาสตร์ตามเกณฑ์ 6 ระดับ พร้อมแนะนำคอร์สที่ตรงกับจุดที่ควรซ่อม',
 }
 
 export const viewport: Viewport = {
@@ -44,7 +45,11 @@ export default function RootLayout({
         ['--font-sans' as string]: `var(--font-inter), var(--font-plex-thai)`,
       }}
     >
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* ผู้ช่วยตอบคำถาม ซ่อนตัวเองในคอนโซลผู้ดูแลและหน้าทำข้อสอบ */}
+        <ChatWidget />
+      </body>
     </html>
   )
 }
