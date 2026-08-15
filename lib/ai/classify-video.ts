@@ -1,4 +1,4 @@
-import { runAgent, AgentResult } from './runner'
+import { runAgent, AgentResult, normaliseConfidence } from './runner'
 import { SUBJECTS, SubjectKey } from '../subjects'
 
 /**
@@ -70,7 +70,7 @@ export async function classifyVideo(input: {
         message: `โมเดลตอบระดับ "${result.data.level}" ซึ่งไม่มีในเกณฑ์ของวิชานี้`,
       }
     }
-    result.data.confidence = Math.max(0, Math.min(100, Number(result.data.confidence) || 0))
+    result.data.confidence = normaliseConfidence(result.data.confidence)
   }
 
   return result

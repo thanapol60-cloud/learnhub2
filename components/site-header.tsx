@@ -16,6 +16,7 @@ const NAV = [
   { href: '/', label: 'หน้าแรก' },
   { href: '/assessment', label: 'แบบประเมิน' },
   { href: '/courses', label: 'คอร์สเรียน' },
+  { href: '/writing', label: 'ฝึกเขียน' },
   { href: '/dashboard', label: 'ความก้าวหน้า' },
 ]
 
