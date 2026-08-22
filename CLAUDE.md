@@ -130,6 +130,62 @@ learnhub2/
 - Progress statistics (correct/wrong answers, accuracy)
 - Persistent user profiles with role information
 
+### 12. AI Agents (8 total, `lib/ai/`)
+- Every call goes through one runner (`lib/ai/runner.ts`) that records the agent
+  name, model, status, tokens, and latency in the `AiUsage` table
+- The console at `/admin/ai` reads that table, so "is the AI actually working"
+  is a number rather than a claim. The previous AI integration failed silently
+  by calling a retired model and falling back to a constant, which is what this
+  logging exists to make impossible
+- Every agent has a non-AI fallback: if the key is missing or the call fails,
+  the original rule-based behaviour still runs
+
+| Agent | Serves | Decision it supports |
+|---|---|---|
+| `explain-answer` | Learner | What the misunderstanding actually was |
+| `recommend-courses` | Learner | What to study first among several weak topics |
+| `select-question` | Learner | Which topic to probe next |
+| `assess-writing` | Learner | What level their own writing reaches |
+| `chatbot` | Learner | Questions about assessments, courses, payment |
+| `analytics-insight` | Admin | Where to produce content next |
+| `classify-video` | Admin | What level an uploaded clip belongs to |
+| `generate-question` | Academic team | Whether a drafted question is usable |
+
+### 13. Writing Assessment (`/writing`)
+- Learners write a response to a prompt; the AI returns an estimated level,
+  a confidence score, strengths, sentence-level corrections (original →
+  corrected → why), and a suggested next step
+- Minimum 15 words; Thai is counted by characters divided by average word
+  length because Thai has no spaces between words
+- The returned level is validated against the subject's own scale — a level
+  outside it is rejected rather than shown
+- This is the one feature multiple-choice questions cannot cover: they measure
+  recognition, not production, and rule-based grammar checking cannot judge
+  whether a piece of writing communicates
+- Results are not persisted; the assessment is per-session feedback
+
+### 14. Chat Assistant (`/api/chat`, `components/chat-widget.tsx`)
+Four layers, cheapest first, stopping at the first that can answer:
+
+| Layer | Answers from | Cost |
+|---|---|---|
+| 1 | The asker's own rows in the database | 0 tokens |
+| 2 | The `Course` table (`lib/course-lookup.ts`) | 0 tokens |
+| 3 | A written FAQ set (`lib/chat-faq.ts`) | 0 tokens |
+| 4 | The `chatbot` agent | Model call |
+
+- Layer 2 must precede the FAQ: "how much is course ENG11" contains the word
+  for price, which matches the FAQ entry about the general price range and would
+  answer with a range wider than that course's actual price
+- Course codes are matched with whitespace collapsed, since people type both
+  `ENG11` and `ENG 11`. A code needs at least two letters so level codes such as
+  `A1` or `M3` are not mistaken for course names
+- Asking about a course that does not exist says so and lists what is on offer,
+  which the asker can act on, rather than refusing
+- The `Course` table is only read when the question mentions a course at all
+- Logged-out visitors get layers 2 and 3 only. Layer 4 needs a login because an
+  unauthenticated model call is a cost anyone could trigger without limit
+
 ## Database Schema
 
 ### User Table
@@ -174,10 +230,32 @@ learnhub2/
 - `DELETE /api/enrollments/:id` - Cancel an unpaid enrollment
 - `GET /api/payment/qr?enrollmentId=` - PromptPay QR (SVG), amount read from the DB
 
+### AI & Assistant
+- `POST /api/chat` - Chat assistant; the response carries `source`
+  (`data` / `course` / `faq` / `ai` / `fallback`) and `usedAI`, so the UI can
+  show whether an answer came from real data or from the model
+- `GET /api/ai/writing?subject=` - Writing prompt for the learner's level
+- `POST /api/ai/writing` - Assess a submitted piece of writing
+- `POST /api/ai/explain` - Explain a wrong answer
+- `GET /api/recommendations?subject=` - Ranked course recommendations
+
 ### Admin
 - `GET /api/admin/students` - All learners with enrollments and payment status
 - `PATCH /api/admin/enrollments/:id` - Approve or reject a payment
 - `DELETE /api/admin/enrollments/:id` - Remove an enrollment
+- `GET /api/admin/ai` - AI usage log (calls, status, tokens, latency)
+- `GET|PATCH /api/admin/settings` - System settings; secret values are
+  encrypted before being stored (see `lib/settings.ts`)
+- `GET /api/admin/analytics` - Level distribution per subject
+- `GET /api/admin/analytics/insight` - AI summary of the statistics
+
+> **Route handlers must stay dynamic.** Next.js treats a `GET` handler that
+> takes no `request` argument as static and runs it once at build time. Most
+> routes here read the session cookie, which opts them into dynamic rendering
+> automatically; the public ones do not, so they declare
+> `export const dynamic = 'force-dynamic'` explicitly. `/api/courses` was
+> missing it and served a build-time snapshot of the catalogue, so courses
+> created afterwards never appeared on `/courses`.
 
 ## Development Guidelines
 
@@ -223,9 +301,25 @@ learnhub2/
 ## Security Notes
 
 - User sessions expire after 24 hours
-- No password authentication (current version)
+- Password authentication with PBKDF2 hashing (see the known weakness below)
+- Login is rate limited: 5 failed attempts in 15 minutes returns 429
+- Five security headers are set in `next.config.js` (HSTS, X-Frame-Options,
+  X-Content-Type-Options, Referrer-Policy, Permissions-Policy)
+- Admin authority is read from the database on every request, never trusted
+  from a client-supplied value
+- Answer keys are never sent to the client alongside a question
 - HTTPS enforced in production
 - Database credentials never exposed to client
+
+### Known weakness — password hashing (PRD FR-7.3)
+
+`lib/auth.ts` calls `pbkdf2Sync(password, 'salt', 1000, 64, 'sha512')`. The salt
+is a shared constant and 1,000 rounds is far below current guidance for
+PBKDF2-SHA512. A shared salt means one precomputed table breaks every account at
+once if the database ever leaks. Fixing it needs a per-user random salt, a much
+higher round count, and a path that re-hashes an existing password the next time
+its owner logs in, so nobody is forced to reset. This is item 1 in the PRD
+backlog and is deliberately recorded rather than quietly left out.
 
 ## Future Enhancements
 
@@ -248,8 +342,14 @@ learnhub2/
 
 ## Testing
 
-Currently no test suite implemented. Suggested additions:
-- Unit tests for assessment algorithms
+A repeatable security suite exists: 20 cases covering authorisation, session
+handling, input validation, and answer-key exposure. It runs against a live
+deployment and writes `security-test-results.json`. Method and results are in
+[SECURITY_TESTING.md](SECURITY_TESTING.md).
+
+Still missing:
+- Unit tests for the level-advance/demote logic in `lib/assessment.ts`
+- Unit tests for the chat course matcher in `lib/course-lookup.ts`
 - Integration tests for API endpoints
 - E2E tests for user flows
 
