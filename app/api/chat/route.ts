@@ -5,19 +5,49 @@ import { matchFaq } from '@/lib/chat-faq'
 import { answerQuestion } from '@/lib/ai/chatbot'
 import { SUBJECTS, SubjectKey, SUBJECT_KEYS } from '@/lib/subjects'
 import { statusLabel } from '@/lib/enrollment-status'
+import {
+  CourseInfo,
+  formatCourseAnswer,
+  looksLikeCourseQuestion,
+  matchCourse,
+} from '@/lib/course-lookup'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * แชทบอทสามชั้น
+ * แชทบอทสี่ชั้น
  *
  *   ชั้น 1  คำถามเกี่ยวกับข้อมูลของผู้ถามเอง → ตอบจากฐานข้อมูล   (0 โทเคน)
- *   ชั้น 2  คำถามที่พบบ่อย                  → ตอบจากคลัง FAQ    (0 โทเคน)
- *   ชั้น 3  ที่เหลือ                        → เรียก AI
+ *   ชั้น 2  คำถามที่อ้างถึงคอร์สเจาะจง       → ตอบจากตาราง Course (0 โทเคน)
+ *   ชั้น 3  คำถามที่พบบ่อย                  → ตอบจากคลัง FAQ    (0 โทเคน)
+ *   ชั้น 4  ที่เหลือ                        → เรียก AI
  *
  * เรียงแบบนี้เพราะคำถามส่วนใหญ่ตอบได้โดยไม่ต้องใช้โมเดล และคำตอบที่มาจาก
  * ฐานข้อมูลหรือข้อความที่เขียนไว้จะถูกต้องเสมอ ต่างจากคำตอบที่โมเดลเดาขึ้นมา
+ *
+ * ชั้นคอร์สต้องมาก่อน FAQ เพราะคำถามอย่าง "คอร์ส ENG11 ราคาเท่าไร" มีคำว่า "ราคา"
+ * ซึ่งไปตรงกับ FAQ เรื่องช่วงราคา คำตอบที่ได้จะกว้างกว่าราคาจริงของคอร์สนั้น
  */
+
+/** อ่านคลังคอร์สเท่าที่ชั้นค้นคอร์สต้องใช้ */
+async function loadCourses(): Promise<CourseInfo[]> {
+  const rows = await prisma.course.findMany({
+    select: {
+      id: true,
+      title: true,
+      subject: true,
+      minCefrLevel: true,
+      maxCefrLevel: true,
+      price: true,
+      duration: true,
+      instructorName: true,
+      _count: { select: { videos: true } },
+    },
+    orderBy: [{ subject: 'asc' }, { minCefrLevel: 'asc' }],
+  })
+
+  return rows.map(({ _count, ...course }) => ({ ...course, videoCount: _count.videos }))
+}
 
 /** คำที่บ่งชี้ว่าผู้ถามกำลังถามถึงข้อมูลของตัวเอง */
 const SELF_LEVEL = ['ระดับของฉัน', 'ระดับฉัน', 'ฉันอยู่ระดับ', 'ผมอยู่ระดับ', 'หนูอยู่ระดับ', 'ระดับตัวเอง', 'ได้ระดับอะไร']
@@ -104,7 +134,7 @@ export async function POST(request: NextRequest) {
         }),
         prisma.courseEnrollment.findMany({
           where: { userId: user.id },
-          select: { status: true, course: { select: { title: true } } },
+          select: { status: true, course: { select: { id: true, title: true } } },
           orderBy: { enrolledAt: 'desc' },
           take: 10,
         }),
@@ -127,6 +157,7 @@ export async function POST(request: NextRequest) {
       })
 
       const enrollmentList = enrollments.map((e) => ({
+        courseId: e.course.id,
         title: e.course.title,
         status: e.status,
       }))
@@ -141,7 +172,24 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // ---- ชั้น 2: FAQ ----
+      // ---- ชั้น 2: คลังคอร์ส ----
+      // อ่านตารางเฉพาะตอนคำถามพูดถึงคอร์สจริง ๆ ไม่ใช่ทุกข้อความในแชท
+      const courses = looksLikeCourseQuestion(question) ? await loadCourses() : []
+      if (courses.length > 0) {
+        const found = matchCourse(question, courses)
+        if (found) {
+          const enrolledStatus = new Map(enrollmentList.map((e) => [e.courseId, e.status]))
+          const reply = formatCourseAnswer(found, courses, enrolledStatus)
+          return NextResponse.json({
+            answer: reply.answer,
+            link: reply.link,
+            source: 'course',
+            usedAI: false,
+          })
+        }
+      }
+
+      // ---- ชั้น 3: FAQ ----
       const faq = matchFaq(question)
       if (faq) {
         return NextResponse.json({
@@ -152,7 +200,7 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // ---- ชั้น 3: AI ----
+      // ---- ชั้น 4: AI ----
       const result = await answerQuestion({
         question,
         history,
@@ -165,6 +213,9 @@ export async function POST(request: NextRequest) {
             title: e.title,
             status: statusLabel(e.status),
           })),
+          // ส่งรายชื่อคอร์สไปด้วยเมื่อคำถามเกี่ยวกับคอร์ส เพื่อไม่ให้โมเดลตอบว่าไม่ทราบ
+          // ทั้งที่ข้อมูลมีอยู่ หรือแย่กว่านั้นคือเดาชื่อคอร์สที่ไม่มีจริงขึ้นมา
+          courses: courses.slice(0, 30).map((c) => `${c.title} (${c.minCefrLevel}, ${c.price} บาท)`),
         },
       })
 
@@ -187,8 +238,24 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // ---- ผู้ที่ยังไม่ได้เข้าสู่ระบบ: ตอบได้เฉพาะ FAQ ----
+    // ---- ผู้ที่ยังไม่ได้เข้าสู่ระบบ: ตอบได้เฉพาะคลังคอร์สกับ FAQ ----
     // ไม่เปิดให้เรียก AI โดยไม่ล็อกอิน เพราะเป็นค่าใช้จ่ายที่ใครก็กดได้ไม่จำกัด
+    // แต่รายละเอียดคอร์สเป็นข้อมูลสาธารณะอยู่แล้ว (หน้า /courses เปิดให้ทุกคนดู)
+    // จึงตอบได้โดยไม่ต้องล็อกอิน และช่วยให้ผู้ที่ยังไม่สมัครตัดสินใจได้
+    const publicCourses = looksLikeCourseQuestion(question) ? await loadCourses() : []
+    if (publicCourses.length > 0) {
+      const found = matchCourse(question, publicCourses)
+      if (found) {
+        const reply = formatCourseAnswer(found, publicCourses)
+        return NextResponse.json({
+          answer: reply.answer,
+          link: reply.link,
+          source: 'course',
+          usedAI: false,
+        })
+      }
+    }
+
     const faq = matchFaq(question)
     if (faq) {
       return NextResponse.json({

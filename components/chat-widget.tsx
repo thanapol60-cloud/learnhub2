@@ -10,11 +10,12 @@ interface Message {
   content: string
   link?: { label: string; href: string }
   /** ตอบมาจากชั้นไหน ใช้แสดงให้ผู้ใช้รู้ว่าคำตอบมาจากข้อมูลจริงหรือจาก AI */
-  source?: 'data' | 'faq' | 'ai' | 'fallback'
+  source?: 'data' | 'course' | 'faq' | 'ai' | 'fallback'
 }
 
 const SOURCE_LABEL: Record<string, string> = {
   data: 'จากข้อมูลของคุณ',
+  course: 'จากคลังคอร์ส',
   faq: 'คำถามที่พบบ่อย',
   ai: 'ตอบโดย AI',
 }
